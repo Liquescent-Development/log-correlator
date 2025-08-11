@@ -1,0 +1,37 @@
+{
+  "name": "@liquescent/log-correlator-core",
+  "version": "1.0.0",
+  "description": "Core correlation engine for real-time log stream processing",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "test": "jest",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "logs",
+    "correlation",
+    "streaming",
+    "real-time",
+    "loki",
+    "graylog"
+  ],
+  "author": "",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "eventemitter3": "^5.0.1"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.0",
+    "@types/node": "^20.10.0"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

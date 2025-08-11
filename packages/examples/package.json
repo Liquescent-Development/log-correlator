@@ -1,0 +1,17 @@
+{
+  "name": "@liquescent/log-correlator-examples",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Usage examples for log-correlator",
+  "scripts": {
+    "build": "echo 'No build needed for examples'",
+    "example:basic": "node basic-correlation.js",
+    "example:electron": "node electron-integration.js",
+    "example:streaming": "node streaming-correlation.js"
+  },
+  "dependencies": {
+    "@liquescent/log-correlator-core": "^1.0.0",
+    "@liquescent/log-correlator-loki": "^1.0.0",
+    "@liquescent/log-correlator-graylog": "^1.0.0"
+  }
+}

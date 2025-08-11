@@ -1,0 +1,241 @@
+import { ParsedQuery, StreamQuery, JoinType } from '@liquescent/log-correlator-core';
+
+interface LabelMapping {
+  left: string;
+  right: string;
+}
+
+interface ParsedQueryExtended extends ParsedQuery {
+  labelMappings?: LabelMapping[];
+  filter?: string;
+  additionalStreams?: StreamQuery[];
+}
+
+export class QueryParser {
+  parse(query: string): ParsedQueryExtended {
+    // Remove extra whitespace and newlines
+    let normalizedQuery = query.replace(/\s+/g, ' ').trim();
+    
+    // Extract filter if present (e.g., {...}{status=~"4..|5.."})
+    const filterMatch = normalizedQuery.match(/\)\s*(\{[^}]+\})\s*$/);
+    let filter: string | undefined;
+    if (filterMatch) {
+      filter = filterMatch[1];
+      normalizedQuery = normalizedQuery.replace(filterMatch[0], ')');
+    }
+    
+    // Find all stream queries first
+    const streams = this.extractAllStreams(normalizedQuery);
+    if (streams.length < 2) {
+      throw new Error('Invalid query: requires at least two streams');
+    }
+    
+    // Extract all join operations
+    const joins = this.extractJoinOperations(normalizedQuery);
+    if (joins.length === 0) {
+      throw new Error('Invalid query: missing join operator');
+    }
+    
+    // Build the query structure
+    const firstJoin = joins[0];
+    const result: ParsedQueryExtended = {
+      leftStream: streams[0],
+      rightStream: streams[1],
+      joinType: firstJoin.joinType,
+      joinKeys: firstJoin.joinKeys,
+      timeWindow: streams[0].timeRange,
+      temporal: firstJoin.temporal,
+      grouping: firstJoin.grouping,
+      labelMappings: firstJoin.labelMappings,
+      filter
+    };
+    
+    // Add additional streams if present (for 3+ stream correlations)
+    if (streams.length > 2) {
+      result.additionalStreams = streams.slice(2);
+    }
+    
+    return result;
+  }
+
+  private extractAllStreams(query: string): StreamQuery[] {
+    const streams: StreamQuery[] = [];
+    // Match patterns like: loki({service="frontend"})[5m], graylog(service:backend)[5m], promql(http_requests_total{job="api"})[5m]
+    const streamPattern = /(\w+)\s*\(([^)]*)\)\s*\[([^\]]+)\]/g;
+    let match;
+    
+    while ((match = streamPattern.exec(query)) !== null) {
+      streams.push({
+        source: match[1],
+        selector: match[2],
+        timeRange: match[3],
+        alias: this.extractAlias(match[2])
+      });
+    }
+    
+    return streams;
+  }
+
+  private extractAlias(selector: string): string | undefined {
+    // Check for alias syntax like: {service="frontend"} as frontend_logs
+    const aliasMatch = selector.match(/\s+as\s+(\w+)$/);
+    return aliasMatch ? aliasMatch[1] : undefined;
+  }
+
+  private extractJoinOperations(query: string): any[] {
+    const joins: any[] = [];
+    
+    // Enhanced pattern to match all join variations including label mappings and temporal joins
+    const joinPattern = /\b(and|or|unless)\s+on\s*\(([^)]+)\)(?:\s+ignoring\s*\(([^)]+)\))?(?:\s+within\s*\(([^)]+)\))?(?:\s+(group_left|group_right)\s*(?:\(([^)]*)\))?)?/gi;
+    let match;
+    
+    while ((match = joinPattern.exec(query)) !== null) {
+      const joinType = match[1].toLowerCase() as JoinType;
+      const joinKeysRaw = match[2];
+      const ignoring = match[3];
+      const temporal = match[4];
+      const groupingSide = match[5];
+      const groupingLabels = match[6];
+      
+      // Parse join keys and label mappings
+      const { keys, mappings } = this.parseJoinKeys(joinKeysRaw);
+      
+      let grouping = undefined;
+      if (groupingSide) {
+        grouping = {
+          side: groupingSide === 'group_left' ? 'left' as const : 'right' as const,
+          labels: groupingLabels ? groupingLabels.split(',').map(l => l.trim()) : []
+        };
+      }
+      
+      joins.push({
+        joinType,
+        joinKeys: keys,
+        labelMappings: mappings,
+        ignoring: ignoring ? ignoring.split(',').map(l => l.trim()) : undefined,
+        temporal,
+        grouping
+      });
+    }
+    
+    return joins;
+  }
+
+  private parseJoinKeys(joinKeysRaw: string): { keys: string[]; mappings?: LabelMapping[] } {
+    const keys: string[] = [];
+    const mappings: LabelMapping[] = [];
+    
+    const parts = joinKeysRaw.split(',').map(p => p.trim());
+    
+    for (const part of parts) {
+      // Check for label mapping syntax (e.g., session_id=trace_id)
+      const mappingMatch = part.match(/^(\w+)\s*=\s*(\w+)$/);
+      if (mappingMatch) {
+        mappings.push({
+          left: mappingMatch[1],
+          right: mappingMatch[2]
+        });
+        keys.push(mappingMatch[1]); // Use left side as the key
+      } else {
+        keys.push(part);
+      }
+    }
+    
+    return { 
+      keys, 
+      mappings: mappings.length > 0 ? mappings : undefined 
+    };
+  }
+
+  private parseStreamQuery(streamPart: string): StreamQuery {
+    // Enhanced pattern to support various stream syntaxes
+    const patterns = [
+      // loki({service="frontend"})[5m]
+      /^(\w+)\s*\((\{[^}]*\})\)\s*\[([^\]]+)\]$/,
+      // graylog(service:backend)[5m]
+      /^(\w+)\s*\(([^)]+)\)\s*\[([^\]]+)\]$/,
+      // promql(http_requests_total{job="api"})[5m]
+      /^(\w+)\s*\(([^)]+)\)\s*\[([^\]]+)\]$/
+    ];
+    
+    for (const pattern of patterns) {
+      const match = streamPart.match(pattern);
+      if (match) {
+        return {
+          source: match[1],
+          selector: match[2],
+          timeRange: match[3],
+          alias: this.extractAlias(match[2])
+        };
+      }
+    }
+    
+    throw new Error(`Invalid stream query: ${streamPart}`);
+  }
+
+  validate(query: string): { valid: boolean; error?: string; details?: any } {
+    try {
+      const parsed = this.parse(query);
+      return { 
+        valid: true,
+        details: {
+          streams: parsed.additionalStreams ? 
+            2 + parsed.additionalStreams.length : 2,
+          joinType: parsed.joinType,
+          temporal: !!parsed.temporal,
+          hasFilter: !!parsed.filter,
+          hasLabelMappings: !!(parsed.labelMappings && parsed.labelMappings.length > 0)
+        }
+      };
+    } catch (error) {
+      return { 
+        valid: false, 
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+}
+
+export class QueryBuilder {
+  private query: string = '';
+
+  addStream(source: string, selector: string, timeRange: string): this {
+    if (this.query) {
+      throw new Error('Join operator must be added before second stream');
+    }
+    this.query = `${source}(${selector})[${timeRange}]`;
+    return this;
+  }
+
+  join(type: JoinType, keys: string[]): this {
+    if (!this.query) {
+      throw new Error('Add first stream before join operator');
+    }
+    this.query += ` ${type} on(${keys.join(',')})`;
+    return this;
+  }
+
+  withTemporal(window: string): this {
+    this.query += ` within(${window})`;
+    return this;
+  }
+
+  withGrouping(side: 'left' | 'right', labels?: string[]): this {
+    const groupType = side === 'left' ? 'group_left' : 'group_right';
+    const labelList = labels?.join(',') || '';
+    this.query += ` ${groupType}(${labelList})`;
+    return this;
+  }
+
+  andStream(source: string, selector: string, timeRange: string): this {
+    this.query += ` ${source}(${selector})[${timeRange}]`;
+    return this;
+  }
+
+  build(): string {
+    if (!this.query) {
+      throw new Error('Query is empty');
+    }
+    return this.query;
+  }
+}
