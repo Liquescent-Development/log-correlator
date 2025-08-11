@@ -1,0 +1,34 @@
+# Code Owners for log-correlator
+# These owners will be the default owners for everything in the repo.
+
+# Global owners
+* @liquescent/maintainers
+
+# Core package
+/packages/core/ @liquescent/core-team
+
+# Query parser
+/packages/query-parser/ @liquescent/parser-team
+
+# Adapters
+/packages/adapters/loki/ @liquescent/adapters-team
+/packages/adapters/graylog/ @liquescent/adapters-team
+
+# Documentation
+/docs/ @liquescent/docs-team
+*.md @liquescent/docs-team
+
+# CI/CD and tooling
+/.github/ @liquescent/devops-team
+/tools/ @liquescent/devops-team
+
+# Security-sensitive files
+/.github/SECURITY.md @liquescent/security-team
+/packages/core/src/auth/ @liquescent/security-team
+/packages/adapters/*/src/auth/ @liquescent/security-team
+
+# Package configuration
+package.json @liquescent/maintainers
+package-lock.json @liquescent/maintainers
+tsconfig.json @liquescent/maintainers
+.eslintrc.json @liquescent/maintainers

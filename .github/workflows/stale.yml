@@ -1,0 +1,52 @@
+name: Mark Stale Issues and PRs
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # Daily at midnight UTC
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  stale:
+    name: Mark Stale
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - uses: actions/stale@v8
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          
+          # Issues
+          stale-issue-message: |
+            This issue has been automatically marked as stale because it has not had recent activity. 
+            It will be closed in 7 days if no further activity occurs. 
+            Thank you for your contributions.
+          close-issue-message: |
+            This issue has been automatically closed due to inactivity. 
+            Please feel free to reopen if the issue persists.
+          days-before-issue-stale: 30
+          days-before-issue-close: 7
+          stale-issue-label: 'stale'
+          exempt-issue-labels: 'pinned,security,bug,enhancement'
+          
+          # Pull Requests
+          stale-pr-message: |
+            This pull request has been automatically marked as stale because it has not had recent activity. 
+            It will be closed in 14 days if no further activity occurs. 
+            Thank you for your contributions.
+          close-pr-message: |
+            This pull request has been automatically closed due to inactivity. 
+            Please feel free to reopen when you're ready to continue work on it.
+          days-before-pr-stale: 14
+          days-before-pr-close: 14
+          stale-pr-label: 'stale'
+          exempt-pr-labels: 'pinned,security,work-in-progress'
+          
+          # Limits
+          operations-per-run: 30
+          remove-stale-when-updated: true
+          ascending: true

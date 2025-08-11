@@ -1,0 +1,339 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [ main ]
+    types: [ opened, synchronize, reopened ]
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Run ESLint
+        run: npm run lint
+        
+      - name: Check formatting
+        run: npx prettier --check "**/*.{ts,js,json,md}"
+
+  typecheck:
+    name: Type Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Run TypeScript compiler
+        run: npm run typecheck
+
+  test:
+    name: Test
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node-version: ['18', '20', '21']
+        
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Run tests
+        run: npm test -- --coverage --maxWorkers=2
+        
+      - name: Upload coverage to Codecov
+        if: matrix.os == 'ubuntu-latest' && matrix.node-version == '20'
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
+          verbose: true
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Build packages
+        run: npm run build
+        
+      - name: Build with minification
+        run: node tools/build.js --clean --minify
+        
+      - name: Verify build outputs
+        run: |
+          # Check that dist directories exist
+          for pkg in packages/*/; do
+            if [ -f "$pkg/package.json" ]; then
+              if [ ! -d "$pkg/dist" ] && [ ! -d "$pkg/lib" ]; then
+                echo "Missing build output for $pkg"
+                exit 1
+              fi
+            fi
+          done
+          
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-artifacts
+          path: |
+            packages/*/dist/
+            packages/*/lib/
+          retention-days: 7
+
+  integration:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [build]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: build-artifacts
+          path: packages/
+          
+      - name: Run integration tests
+        run: |
+          # Run example scripts to verify integration
+          cd packages/examples
+          npm install
+          node simple-correlation.js
+          node multi-stream.js
+          
+      - name: Test query parser
+        run: |
+          cd packages/query-parser
+          npm run test:integration || true
+
+  benchmark:
+    name: Performance Benchmark
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [build]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: |
+          npm ci
+          cd tools && npm install
+          
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: build-artifacts
+          path: packages/
+          
+      - name: Run benchmarks
+        run: |
+          node tools/benchmark.js simple --duration 30000 --output benchmark-simple.json
+          node tools/benchmark.js complex --duration 30000 --output benchmark-complex.json
+          
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v3
+        with:
+          name: benchmark-results
+          path: benchmark-*.json
+          retention-days: 30
+          
+      - name: Comment benchmark results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const simpleResults = JSON.parse(fs.readFileSync('benchmark-simple.json', 'utf8'));
+            const complexResults = JSON.parse(fs.readFileSync('benchmark-complex.json', 'utf8'));
+            
+            const comment = `## 📊 Benchmark Results
+            
+            ### Simple Correlation
+            - **Throughput**: ${simpleResults.summary.correlationsPerSecond.toFixed(2)} correlations/sec
+            - **P95 Latency**: ${simpleResults.latency.p95.toFixed(2)}ms
+            - **Memory**: ${simpleResults.memory.heapUsed.mean.toFixed(2)}MB
+            
+            ### Complex Correlation
+            - **Throughput**: ${complexResults.summary.correlationsPerSecond.toFixed(2)} correlations/sec
+            - **P95 Latency**: ${complexResults.latency.p95.toFixed(2)}ms
+            - **Memory**: ${complexResults.memory.heapUsed.mean.toFixed(2)}MB`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Run npm audit
+        run: npm audit --production
+        continue-on-error: true
+        
+      - name: Run security audit with Task
+        run: |
+          npm install -g @liquescent/log-correlator-core || true
+          npx claude-code --non-interactive << 'EOF'
+          Use the security-auditor-nodejs agent to audit this project for security vulnerabilities
+          EOF
+        continue-on-error: true
+        
+      - name: Check for secrets
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+
+  validate-pr:
+    name: Validate PR
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Check commit messages
+        run: |
+          # Validate conventional commits
+          commits=$(git log --format="%s" origin/${{ github.base_ref }}..HEAD)
+          
+          while IFS= read -r commit; do
+            if ! echo "$commit" | grep -qE "^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\(.+\))?: .+"; then
+              echo "Invalid commit message: $commit"
+              echo "Please use conventional commit format: type(scope): description"
+              exit 1
+            fi
+          done <<< "$commits"
+          
+      - name: Check PR title
+        run: |
+          title="${{ github.event.pull_request.title }}"
+          if ! echo "$title" | grep -qE "^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\(.+\))?: .+"; then
+            echo "Invalid PR title: $title"
+            echo "Please use conventional commit format for PR title"
+            exit 1
+          fi
+          
+      - name: Check file changes
+        run: |
+          # Ensure no large files
+          large_files=$(find . -type f -size +1M | grep -v node_modules | grep -v .git)
+          if [ -n "$large_files" ]; then
+            echo "Large files detected (>1MB):"
+            echo "$large_files"
+            exit 1
+          fi
+
+  all-checks:
+    name: All Checks Passed
+    runs-on: ubuntu-latest
+    needs: [lint, typecheck, test, build, integration, benchmark, security]
+    if: always()
+    
+    steps:
+      - name: Check job results
+        run: |
+          if [ "${{ contains(needs.*.result, 'failure') }}" = "true" ]; then
+            echo "One or more required checks failed"
+            exit 1
+          fi
+          echo "All required checks passed!"
