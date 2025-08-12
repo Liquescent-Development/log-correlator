@@ -1,4 +1,4 @@
-import { ParsedQuery, StreamQuery } from '@liquescent/log-correlator-core';
+import { ParsedQuery, StreamQuery, JoinType } from '@liquescent/log-correlator-core';
 
 // Type definition for the generated parser
 interface GeneratedParser {
@@ -26,6 +26,7 @@ interface JoinInfo {
 }
 
 // Generated file - typed import
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const generatedParser: GeneratedParser = require('./generated/parser.js');
 
 // interface ParseError {
@@ -66,15 +67,32 @@ export class PeggyQueryParser {
     // Extract join info from the right stream (where it's attached by the grammar)
     const join = result.rightStream?.join || {};
     
+    // Safely cast joinType to JoinType
+    const joinTypeRaw = join.type || result.joinType || 'and';
+    const joinType = (joinTypeRaw === 'and' || joinTypeRaw === 'or' || joinTypeRaw === 'unless') 
+      ? joinTypeRaw as JoinType 
+      : 'and' as JoinType;
+    
+    // Transform grouping if present
+    let grouping: ParsedQuery['grouping'] | undefined;
+    const rawGrouping = join.grouping || result.grouping;
+    if (rawGrouping && rawGrouping.side) {
+      const side = rawGrouping.side === 'right' ? 'right' : 'left';
+      grouping = {
+        side,
+        labels: rawGrouping.labels || []
+      };
+    }
+    
     // Transform Peggy output to our expected format
     return {
       leftStream: result.leftStream,
       rightStream: result.rightStream,
-      joinType: join.type || result.joinType || 'and',
+      joinType,
       joinKeys: join.keys || result.joinKeys || [],
       timeWindow: result.leftStream.timeRange,
       temporal: join.temporal || result.temporal,
-      grouping: join.grouping || result.grouping,
+      grouping,
       labelMappings: join.labelMappings || result.labelMappings,
       filter: result.filter,
       additionalStreams: result.additionalStreams

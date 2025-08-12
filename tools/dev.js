@@ -125,7 +125,7 @@ function setupWatcher() {
     '!packages/**/node_modules/**'
   ], {
     cwd: ROOT_DIR,
-    ignored: /(^|[\/\\])\../, // Ignore dotfiles
+    ignored: /(^|[\\/\\])\\../, // Ignore dotfiles
     persistent: true,
     ignoreInitial: true
   });

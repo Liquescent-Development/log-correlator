@@ -6,8 +6,6 @@
  */
 
 const { CorrelationEngine } = require('@liquescent/log-correlator-core');
-const { LokiAdapter } = require('@liquescent/log-correlator-loki');
-const { GraylogAdapter } = require('@liquescent/log-correlator-graylog');
 const { performance } = require('perf_hooks');
 const v8 = require('v8');
 const os = require('os');
@@ -91,14 +89,14 @@ class MockAdapter {
     this.generator = generator;
   }
   
-  async *createStream(query, options = {}) {
+  async *createStream(_query, options = {}) {
     const duration = options.duration || CONFIG.duration;
     const rate = options.eventsPerSecond || CONFIG.eventsPerSecond;
     
     yield* this.generator.generateStream(rate, duration);
   }
   
-  validateQuery(query) {
+  validateQuery(_query) {
     return true;
   }
   
@@ -375,7 +373,7 @@ class BenchmarkScenarios {
 }
 
 // Profile memory and CPU
-async function profilePerformance(scenario, duration) {
+async function profilePerformance(scenario, _duration) {
   if (!CONFIG.profile) return null;
   
   console.log('📊 Profiling performance...');
@@ -508,9 +506,9 @@ async function runBenchmark() {
     } else {
       await scenario();
     }
-  } catch (error) {
-    console.error('Benchmark failed:', error);
-    collector.recordError(error);
+  } catch (_error) {
+    console.error('Benchmark failed:', _error);
+    collector.recordError(_error);
   } finally {
     // Stop metrics collection
     collector.stop();

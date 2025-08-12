@@ -11,7 +11,6 @@ const path = require('path');
 const { minify } = require('terser');
 
 const ROOT_DIR = path.join(__dirname, '..');
-const PACKAGES_DIR = path.join(ROOT_DIR, 'packages');
 
 // Build configuration
 const BUILD_CONFIG = {

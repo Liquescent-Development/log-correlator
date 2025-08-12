@@ -152,7 +152,7 @@ class LoadWorker {
       }, 30000); // 30 second timeout
       
       for await (const correlation of this.engine.correlate(query)) {
-        correlationCount++;
+        if (correlation) correlationCount++;
         if (correlationCount >= 100) break; // Limit results
       }
       

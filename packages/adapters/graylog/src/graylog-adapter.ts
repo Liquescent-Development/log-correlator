@@ -1,5 +1,5 @@
 import { DataSourceAdapter, LogEvent, CorrelationError } from '@liquescent/log-correlator-core';
-import fetch from 'node-fetch';
+import fetch, { RequestInit } from 'node-fetch';
 
 export interface GraylogAdapterOptions {
   url: string;

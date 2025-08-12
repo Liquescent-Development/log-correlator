@@ -4,7 +4,8 @@ import {
   DataSourceAdapter,
   CorrelatedEvent,
   CorrelationError,
-  ParsedQuery
+  ParsedQuery,
+  StreamQuery
 } from './types';
 import { StreamJoiner } from './stream-joiner';
 import { MultiStreamJoiner } from './multi-stream-joiner';
