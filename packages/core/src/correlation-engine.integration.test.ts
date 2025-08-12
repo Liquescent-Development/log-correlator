@@ -9,11 +9,12 @@ class MockAdapter implements DataSourceAdapter {
     // Parse the selector to filter events
     const filters = this.parseSelector(selector);
     
-    for (const event of this.events) {
-      // Apply filters if provided
-      if (filters && !this.matchesFilters(event, filters)) {
-        continue;
-      }
+    // Create a filtered copy to avoid interference between streams
+    const filteredEvents = this.events.filter(event => 
+      !filters || this.matchesFilters(event, filters)
+    );
+    
+    for (const event of filteredEvents) {
       yield event;
       // Simulate real-time delay
       await new Promise(resolve => setTimeout(resolve, 10));

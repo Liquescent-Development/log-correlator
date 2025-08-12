@@ -371,7 +371,7 @@ export class StreamJoiner {
       },
       joinKey: this.options.joinKeys[0],
       joinValue,
-      events: events.map(e => ({
+      events: filteredEvents.map(e => ({
         alias: e.stream,
         source: e.source,
         timestamp: e.timestamp,

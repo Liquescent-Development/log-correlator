@@ -135,7 +135,12 @@ export class PromQLAdapter implements DataSourceAdapter {
 
   private async queryPrometheus(params: PrometheusRangeQueryParams): Promise<PrometheusQueryResponse> {
     const url = `${this.options.url}/api/v1/query_range`;
-    const queryParams = new URLSearchParams(params as Record<string, string>);
+    const queryParams = new URLSearchParams({
+      query: params.query,
+      start: params.start.toString(),
+      end: params.end.toString(),
+      step: params.step
+    });
     
     const fetchOptions: RequestInit = {
       method: 'GET',
