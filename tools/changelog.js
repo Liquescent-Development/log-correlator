@@ -20,7 +20,10 @@ const CONFIG = {
   to: process.argv.find(arg => arg.startsWith('--to='))?.split('=')[1] || 'HEAD',
   output: process.argv.find(arg => arg.startsWith('--output='))?.split('=')[1] || CHANGELOG_PATH,
   dryRun: process.argv.includes('--dry-run'),
-  verbose: process.argv.includes('--verbose')
+  verbose: process.argv.includes('--verbose'),
+  includeMerges: process.argv.includes('--include-merges'),
+  noOther: process.argv.includes('--no-other'),
+  template: process.argv.find(arg => arg.startsWith('--template='))?.split('=')[1]
 };
 
 // Commit type mappings
@@ -72,55 +75,72 @@ function getTags() {
 
 // Get commits between two refs
 function getCommits(from, to = 'HEAD') {
-  const format = '%H|%an|%ae|%ad|%s|%b';
+  const format = '%H§%an§%ae§%ad§%s§%b';
+  const mergeFlag = CONFIG.includeMerges ? '' : '--no-merges';
   const command = from 
-    ? `git log ${from}..${to} --pretty=format:"${format}"`
-    : `git log ${to} --pretty=format:"${format}"`;
+    ? `git log ${from}..${to} --pretty=format:"${format}" --date=iso ${mergeFlag}`
+    : `git log ${to} --pretty=format:"${format}" --date=iso ${mergeFlag}`;
   
   const output = exec(command);
   if (!output) return [];
   
   return output.split('\n').map(line => {
-    const [hash, author, email, date, subject, body] = line.split('|');
-    return { hash, author, email, date, subject, body: body || '' };
-  });
+    const parts = line.split('§');
+    if (parts.length < 5) return null;
+    
+    const [hash, author, email, date, subject] = parts;
+    const body = parts.slice(5).join('§').trim(); // Handle body with § characters
+    
+    return { 
+      hash: hash || '', 
+      author: author || '', 
+      email: email || '', 
+      date: date || '', 
+      subject: subject || '', 
+      body: body || '' 
+    };
+  }).filter(commit => commit && commit.hash && commit.subject); // Filter out empty commits
 }
 
 // Parse commit message
 function parseCommit(commit) {
   const { hash, author, date, subject, body } = commit;
   
+  // Safety checks for undefined values
+  const safeSubject = subject || '';
+  const safeBody = body || '';
+  
   // Check for breaking changes
-  const isBreaking = subject.includes('!') || 
-                    body.toLowerCase().includes('breaking change');
+  const isBreaking = safeSubject.includes('!') || 
+                    safeBody.toLowerCase().includes('breaking change');
   
   // Parse conventional commit format
-  const conventionalMatch = subject.match(/^(\w+)(?:\(([^)]+)\))?!?:\s*(.+)/);
+  const conventionalMatch = safeSubject.match(/^(\w+)(?:\(([^)]+)\))?!?:\s*(.+)/);
   
   if (conventionalMatch) {
     const [, type, scope, description] = conventionalMatch;
     return {
-      hash: hash.substring(0, 7),
+      hash: hash ? hash.substring(0, 7) : 'unknown',
       type: type.toLowerCase(),
       scope,
       description,
-      author,
-      date: new Date(date),
+      author: author || 'Unknown',
+      date: date ? new Date(date) : new Date(),
       breaking: isBreaking,
-      body
+      body: safeBody
     };
   }
   
   // Parse non-conventional commits
   return {
-    hash: hash.substring(0, 7),
+    hash: hash ? hash.substring(0, 7) : 'unknown',
     type: 'other',
     scope: null,
-    description: subject,
-    author,
-    date: new Date(date),
+    description: safeSubject,
+    author: author || 'Unknown',
+    date: date ? new Date(date) : new Date(),
     breaking: isBreaking,
-    body
+    body: safeBody
   };
 }
 
@@ -202,7 +222,8 @@ function groupCommits(commits) {
 // Format commit line
 function formatCommit(commit) {
   const scope = commit.scope ? `**${commit.scope}:** ` : '';
-  const link = `[${commit.hash}]`;
+  const repoUrl = getRepoUrl();
+  const link = `([${commit.hash}](${repoUrl}/commit/${commit.hash}))`;
   
   return `- ${scope}${commit.description} ${link}`;
 }
@@ -286,7 +307,7 @@ function generateSection(version, date, groups) {
   });
   
   // Other commits (if not hiding)
-  if (groups.other.length > 0 && !process.argv.includes('--no-other')) {
+  if (groups.other.length > 0 && !CONFIG.noOther) {
     lines.push('### 📝 Other Changes');
     lines.push('');
     groups.other.forEach(commit => {
@@ -344,22 +365,22 @@ function generateChangelog() {
   }
   
   // Add links section
-  sections.push('---');
-  sections.push('');
-  sections.push('## Links');
-  sections.push('');
-  
-  if (CONFIG.all || !CONFIG.unreleased) {
+  if ((CONFIG.all || !CONFIG.unreleased) && tags.length > 0) {
+    sections.push('---');
+    sections.push('');
+    sections.push('## Links');
+    sections.push('');
+    
     const repoUrl = getRepoUrl();
     
-    sections.push(`[Unreleased]: ${repoUrl}/compare/${tags[0]}...HEAD`);
-    
-    for (let i = 0; i < tags.length - 1; i++) {
-      const version = tags[i].replace(/^v/, '');
-      sections.push(`[${version}]: ${repoUrl}/compare/${tags[i + 1]}...${tags[i]}`);
-    }
-    
     if (tags.length > 0) {
+      sections.push(`[Unreleased]: ${repoUrl}/compare/${tags[0]}...HEAD`);
+      
+      for (let i = 0; i < tags.length - 1; i++) {
+        const version = tags[i].replace(/^v/, '');
+        sections.push(`[${version}]: ${repoUrl}/compare/${tags[i + 1]}...${tags[i]}`);
+      }
+      
       const firstVersion = tags[tags.length - 1].replace(/^v/, '');
       sections.push(`[${firstVersion}]: ${repoUrl}/releases/tag/${tags[tags.length - 1]}`);
     }
@@ -410,6 +431,73 @@ function updateChangelog(content) {
   return content;
 }
 
+// Suggest next version based on commits
+function suggestVersion(commits) {
+  const groups = groupCommits(commits);
+  
+  // Check for breaking changes
+  if (groups.breaking.length > 0) {
+    return 'major';
+  }
+  
+  // Check for features
+  if (groups.features.length > 0) {
+    return 'minor';
+  }
+  
+  // Check for fixes
+  if (groups.fixes.length > 0 || groups.performance.length > 0) {
+    return 'patch';
+  }
+  
+  // Only other changes
+  return 'patch';
+}
+
+// Get current version from package.json
+function getCurrentVersion() {
+  const possiblePaths = [
+    path.join(ROOT_DIR, 'packages/core/package.json'),
+    path.join(ROOT_DIR, 'package.json')
+  ];
+  
+  for (const packagePath of possiblePaths) {
+    try {
+      const packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
+      if (packageJson.version) {
+        return packageJson.version;
+      }
+    } catch {
+      // Continue to next path
+    }
+  }
+  
+  return '0.0.0';
+}
+
+// Calculate next version
+function getNextVersion(current, bump) {
+  if (!current || !current.includes('.')) {
+    current = '0.0.0';
+  }
+  
+  const parts = current.split('.');
+  const major = parseInt(parts[0] || '0', 10);
+  const minor = parseInt(parts[1] || '0', 10);
+  const patch = parseInt(parts[2] || '0', 10);
+  
+  switch (bump) {
+    case 'major':
+      return `${major + 1}.0.0`;
+    case 'minor':
+      return `${major}.${minor + 1}.0`;
+    case 'patch':
+      return `${major}.${minor}.${patch + 1}`;
+    default:
+      return current;
+  }
+}
+
 // Main function
 function main() {
   console.log('📝 Generating Changelog\n');
@@ -417,17 +505,35 @@ function main() {
   try {
     // Generate content based on options
     let content;
+    let commits = [];
     
     if (CONFIG.from) {
       // Generate for specific range
       log.info(`Generating changelog from ${CONFIG.from} to ${CONFIG.to}`);
-      const commits = getCommits(CONFIG.from, CONFIG.to);
+      commits = getCommits(CONFIG.from, CONFIG.to);
       const groups = groupCommits(commits);
       content = generateSection('Custom Range', new Date().toISOString().split('T')[0], groups);
     } else {
       // Generate full changelog
       log.info('Generating full changelog');
       content = generateChangelog();
+      
+      // Get unreleased commits for version suggestion
+      const tags = getTags();
+      const from = tags[0] || null;
+      commits = getCommits(from, 'HEAD');
+    }
+    
+    // Show version suggestion for unreleased commits
+    if (CONFIG.unreleased && commits.length > 0) {
+      const currentVersion = getCurrentVersion();
+      const suggestedBump = suggestVersion(commits);
+      const nextVersion = getNextVersion(currentVersion, suggestedBump);
+      
+      log.info(`📦 Version Suggestion:`);
+      log.info(`   Current: ${currentVersion}`);
+      log.info(`   Suggested: ${nextVersion} (${suggestedBump} bump)`);
+      log.info(`   Based on ${commits.length} commits since last release\n`);
     }
     
     // Write or display
@@ -450,26 +556,33 @@ function main() {
 if (require.main === module) {
   if (process.argv.includes('--help')) {
     console.log(`
-Changelog Generation Tool
+📝 Changelog Generation Tool for log-correlator
 
 Usage: node tools/changelog.js [options]
 
 Options:
-  --unreleased      Generate only unreleased changes
-  --all             Generate complete changelog
-  --from=<ref>      Generate from specific ref/tag
-  --to=<ref>        Generate to specific ref/tag (default: HEAD)
-  --output=<file>   Output file (default: CHANGELOG.md)
-  --no-other        Hide commits without type
-  --dry-run         Show output without writing
-  --verbose         Show detailed output
-  --help            Show this help message
+  --unreleased         Generate only unreleased changes
+  --all                Generate complete changelog
+  --from=<ref>         Generate from specific ref/tag
+  --to=<ref>           Generate to specific ref/tag (default: HEAD)
+  --output=<file>      Output file (default: CHANGELOG.md)
+  --no-other           Hide commits without conventional type
+  --include-merges     Include merge commits in output
+  --dry-run            Show output without writing to file
+  --verbose            Show detailed execution output
+  --help               Show this help message
 
 Examples:
-  node tools/changelog.js --all
-  node tools/changelog.js --unreleased
-  node tools/changelog.js --from=v1.0.0 --to=v2.0.0
-  node tools/changelog.js --dry-run --unreleased
+  node tools/changelog.js --all                    # Generate complete changelog
+  node tools/changelog.js --unreleased             # Generate only unreleased changes
+  node tools/changelog.js --from=v1.0.0 --to=v2.0.0  # Generate for specific range
+  node tools/changelog.js --dry-run --unreleased   # Preview unreleased changes
+  node tools/changelog.js --no-other --all         # Hide non-conventional commits
+
+Conventional Commit Types:
+  feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert
+
+The tool follows Keep a Changelog format and supports Semantic Versioning.
     `);
     process.exit(0);
   }

@@ -10,7 +10,10 @@
     "test": "npm run test --workspaces --if-present",
     "lint": "eslint . --ext .ts,.js",
     "typecheck": "tsc --noEmit",
-    "clean": "npm run clean --workspaces --if-present"
+    "clean": "npm run clean --workspaces --if-present",
+    "changelog": "node tools/changelog.js --unreleased",
+    "changelog:all": "node tools/changelog.js --all",
+    "changelog:preview": "node tools/changelog.js --unreleased --dry-run"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",

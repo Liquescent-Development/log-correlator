@@ -9,46 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ✨ Features
 
-- Initial implementation of log correlator with TypeScript monorepo structure
-- Core correlation engine with real-time stream processing
-- PromQL-inspired query language with Peggy parser (no Java dependency)
-- Loki adapter with WebSocket and polling support
-- Graylog adapter with authentication support
-- Event deduplication with SHA256 hashing
-- Indexed event storage for O(1) join key lookups
-- Parallel processing with worker threads
-- Backpressure control for memory management
-- Comprehensive JavaScript API for Electron compatibility
+- Enhance WebSocket implementation and fix PromQL adapter types ([a3bbda7](https://github.com/Liquescent-Development/log-correlator/commit/a3bbda7))
+- Add comprehensive practical examples for error detection and IDE integration ([4212ef2](https://github.com/Liquescent-Development/log-correlator/commit/4212ef2))
+- Add PromQL adapter, post-correlation filters, and LRU cache management ([9ba1e94](https://github.com/Liquescent-Development/log-correlator/commit/9ba1e94))
+- Complete query parser implementation for ignoring clause ([b156f10](https://github.com/Liquescent-Development/log-correlator/commit/b156f10))
+- Implement advanced query language features for log correlation ([e3334a1](https://github.com/Liquescent-Development/log-correlator/commit/e3334a1))
+- Add complete documentation, tooling, and GitHub workflows ([0c33a29](https://github.com/Liquescent-Development/log-correlator/commit/0c33a29))
 
-### 📦 Build
+### 🐛 Bug Fixes
 
-- TypeScript compilation to CommonJS and ESM
-- Minified builds for production
-- Source map generation
-- npm workspace configuration
+- Add group_left/group_right parsing to CorrelationEngine ([7ee9459](https://github.com/Liquescent-Development/log-correlator/commit/7ee9459))
+- Resolve CI/CD pipeline issues for build and test compatibility ([5bd25ec](https://github.com/Liquescent-Development/log-correlator/commit/5bd25ec))
 
-### 📝 Documentation
+### ♻️ Refactoring
 
-- Complete API documentation
-- Troubleshooting guide
-- Performance tuning guide
-- Migration guide from other tools
+- Improve TypeScript types, ESLint config, and test reliability ([5137ce4](https://github.com/Liquescent-Development/log-correlator/commit/5137ce4))
 
-### 🔧 Tools
+### 📝 Other Changes
 
-- Build script with minification support
-- Release automation script
-- Benchmarking tool for performance testing
-- Load testing tool with multiple scenarios
-- Changelog generation from git commits
-
-## [1.0.0] - TBD
-
-Initial release (placeholder for first official release)
-
----
-
-## Links
-
-[Unreleased]: https://github.com/liquescent/log-correlator/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/liquescent/log-correlator/releases/tag/v1.0.0
+- Add complete log-correlator TypeScript package implementation ([f2620ac](https://github.com/Liquescent-Development/log-correlator/commit/f2620ac))
+- Initial commit ([348823b](https://github.com/Liquescent-Development/log-correlator/commit/348823b))
