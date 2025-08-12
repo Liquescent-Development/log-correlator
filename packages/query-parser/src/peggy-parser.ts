@@ -12,6 +12,7 @@ interface ParseResult {
   joinKeys?: string[];
   temporal?: string;
   grouping?: { side: string; labels?: string[] };
+  ignoring?: string[];
   labelMappings?: LabelMapping[];
   filter?: string;
   additionalStreams?: StreamQuery[];
@@ -22,6 +23,7 @@ interface JoinInfo {
   keys?: string[];
   temporal?: string;
   grouping?: { side: string; labels?: string[] };
+  ignoring?: string[];
   labelMappings?: LabelMapping[];
 }
 
@@ -93,6 +95,7 @@ export class PeggyQueryParser {
       timeWindow: result.leftStream.timeRange,
       temporal: join.temporal || result.temporal,
       grouping,
+      ignoring: join.ignoring || result.ignoring,
       labelMappings: join.labelMappings || result.labelMappings,
       filter: result.filter,
       additionalStreams: result.additionalStreams

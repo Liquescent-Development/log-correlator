@@ -71,12 +71,12 @@ describe('PeggyQueryParser', () => {
       });
     });
 
-    it.skip('should parse ignoring clause', () => {
+    it('should parse ignoring clause', () => {
       const query = `loki({service="frontend"})[5m] and on(request_id) ignoring(timestamp) loki({service="backend"})[5m]`;
 
       const result = parser.parse(query);
       
-      expect((result as any).ignoring).toContain('timestamp');
+      expect(result.ignoring).toEqual(['timestamp']);
     });
 
     it('should parse filters', () => {
