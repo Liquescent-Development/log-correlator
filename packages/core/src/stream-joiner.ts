@@ -8,6 +8,11 @@ export interface StreamJoinerOptions {
   lateTolerance: number;
   maxEvents: number;
   temporal?: number;
+  ignoring?: string[];
+  grouping?: {
+    side: 'left' | 'right';
+    labels: string[];
+  };
   labelMappings?: Array<{ left: string; right: string }>;
   filter?: string;
 }
@@ -120,6 +125,20 @@ export class StreamJoiner {
       }
     }
     
+    // If ignoring is specified, create a composite key from all labels except ignored ones
+    if (this.options.ignoring && this.options.ignoring.length > 0) {
+      const keyParts: string[] = [];
+      const allLabels = { ...event.labels, ...event.joinKeys };
+      
+      for (const [label, value] of Object.entries(allLabels)) {
+        if (!this.options.ignoring.includes(label) && value) {
+          keyParts.push(`${label}:${value}`);
+        }
+      }
+      
+      return keyParts.length > 0 ? keyParts.sort().join(',') : null;
+    }
+    
     // Standard join key extraction
     for (const key of this.options.joinKeys) {
       if (event.labels[key]) {
@@ -146,30 +165,56 @@ export class StreamJoiner {
         if (rightEvents.has(key) && !processedKeys.has(key)) {
           const rightEventList = rightEvents.get(key)!;
           
-          // Apply temporal constraint if specified
-          if (this.options.temporal !== undefined) {
-            // Check if events are within temporal window
-            const filteredEvents = this.filterByTemporal(
-              leftEventList, 
-              rightEventList, 
-              this.options.temporal
-            );
-            
-            if (filteredEvents.length === 0) {
-              continue; // Skip this correlation if no events match temporal constraint
+          // Handle grouping modifiers for many-to-one or one-to-many joins
+          if (this.options.grouping) {
+            if (this.options.grouping.side === 'left') {
+              // group_left: Keep all left events, allow multiple right matches
+              // Create one correlation per left event with all matching right events
+              for (const leftEvent of leftEventList) {
+                correlations.push(this.createCorrelation(
+                  key,
+                  [leftEvent, ...rightEventList],
+                  'complete'
+                ));
+              }
+            } else {
+              // group_right: Keep all right events, allow multiple left matches
+              // Create one correlation per right event with all matching left events
+              for (const rightEvent of rightEventList) {
+                correlations.push(this.createCorrelation(
+                  key,
+                  [...leftEventList, rightEvent],
+                  'complete'
+                ));
+              }
             }
-            
-            correlations.push(this.createCorrelation(
-              key,
-              filteredEvents,
-              'complete'
-            ));
           } else {
-            correlations.push(this.createCorrelation(
-              key,
-              [...leftEventList, ...rightEventList],
-              'complete'
-            ));
+            // Standard join without grouping
+            // Apply temporal constraint if specified
+            if (this.options.temporal !== undefined) {
+              // Check if events are within temporal window
+              const filteredEvents = this.filterByTemporal(
+                leftEventList, 
+                rightEventList, 
+                this.options.temporal
+              );
+              
+              if (filteredEvents.length === 0) {
+                continue; // Skip this correlation if no events match temporal constraint
+              }
+              
+              correlations.push(this.createCorrelation(
+                key,
+                filteredEvents,
+                'complete'
+              ));
+            } else {
+              correlations.push(this.createCorrelation(
+                key,
+                [...leftEventList, ...rightEventList],
+                'complete'
+              ));
+            }
           }
           processedKeys.add(key);
         }

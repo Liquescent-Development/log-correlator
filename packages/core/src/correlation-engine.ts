@@ -135,6 +135,8 @@ export class CorrelationEngine extends EventEmitter {
       lateTolerance: this.options.lateTolerance as number,
       maxEvents: this.options.maxEvents,
       temporal: parsedQuery.temporal ? parseTimeWindow(parsedQuery.temporal) : undefined,
+      ignoring: parsedQuery.ignoring,
+      grouping: parsedQuery.grouping,
       labelMappings: parsedQuery.labelMappings
     });
 

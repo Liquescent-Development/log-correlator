@@ -224,6 +224,124 @@ describe('CorrelationEngine Integration', () => {
     }, 10000);
   });
 
+  describe('Anti-join (unless) operator', () => {
+    it('should perform anti-join correctly', async () => {
+      const leftEvents = [
+        { 
+          timestamp: new Date().toISOString(), 
+          source: 'mock', 
+          message: 'Left 1',
+          labels: { service: 'test', id: '1' },
+          joinKeys: { id: '1' }
+        },
+        { 
+          timestamp: new Date().toISOString(), 
+          source: 'mock', 
+          message: 'Left 2',
+          labels: { service: 'test', id: '2' },
+          joinKeys: { id: '2' }
+        },
+        { 
+          timestamp: new Date().toISOString(), 
+          source: 'mock', 
+          message: 'Left 3',
+          labels: { service: 'test', id: '3' },
+          joinKeys: { id: '3' }
+        }
+      ];
+
+      const rightEvents = [
+        { 
+          timestamp: new Date().toISOString(), 
+          source: 'mock', 
+          message: 'Right 1',
+          labels: { service: 'backend', id: '1' },
+          joinKeys: { id: '1' }
+        }
+      ];
+
+      const mockAdapter = new MockAdapter([...leftEvents, ...rightEvents]);
+      engine.addAdapter('mock', mockAdapter);
+
+      const query = `
+        mock({service="test"})[5m]
+          unless on(id)
+          mock({service="backend"})[5m]
+      `;
+
+      const results: CorrelatedEvent[] = [];
+      for await (const correlation of engine.correlate(query)) {
+        results.push(correlation);
+      }
+
+      // Should only get events with id='2' and id='3' (not in right)
+      expect(results).toHaveLength(2);
+      expect(results.map(r => r.joinValue).sort()).toEqual(['2', '3']);
+      
+      // Each result should only have the left event
+      results.forEach(result => {
+        expect(result.events).toHaveLength(1);
+        expect(result.events[0].source).toBe('mock');
+        expect(result.metadata.completeness).toBe('partial');
+      });
+    });
+  });
+
+  describe('Group modifiers', () => {
+    it('should handle group_left for many-to-one joins', async () => {
+      const events = [
+        // Multiple frontend events
+        { 
+          timestamp: new Date().toISOString(), 
+          source: 'mock', 
+          message: 'Frontend 1',
+          labels: { service: 'frontend', request_id: 'req1', session_id: 'session1' },
+          joinKeys: { request_id: 'req1' }
+        },
+        { 
+          timestamp: new Date().toISOString(), 
+          source: 'mock', 
+          message: 'Frontend 2',
+          labels: { service: 'frontend', request_id: 'req1', session_id: 'session2' },
+          joinKeys: { request_id: 'req1' }
+        },
+        // Single backend event
+        { 
+          timestamp: new Date().toISOString(), 
+          source: 'mock', 
+          message: 'Backend',
+          labels: { service: 'backend', request_id: 'req1', session_id: '' },
+          joinKeys: { request_id: 'req1' }
+        }
+      ];
+
+      engine.addAdapter('mock', new MockAdapter(events));
+
+      const query = `
+        mock({service="frontend"})[5m]
+          and on(request_id) group_left(session_id)
+          mock({service="backend"})[5m]
+      `;
+
+      const results: CorrelatedEvent[] = [];
+      for await (const correlation of engine.correlate(query)) {
+        results.push(correlation);
+      }
+
+      // Should create 2 correlations (one per frontend event)
+      expect(results).toHaveLength(2);
+      
+      // Each correlation should have one frontend event and the backend event
+      results.forEach(result => {
+        expect(result.events).toHaveLength(2);
+        const frontendEvents = result.events.filter(e => e.labels.service === 'frontend');
+        const backendEvents = result.events.filter(e => e.labels.service === 'backend');
+        expect(frontendEvents).toHaveLength(1);
+        expect(backendEvents).toHaveLength(1);
+      });
+    });
+  });
+
   describe('Error handling', () => {
     it('should handle missing adapters gracefully', async () => {
       const query = `

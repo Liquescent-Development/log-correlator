@@ -81,6 +81,7 @@ export interface ParsedQuery {
     side: 'left' | 'right';
     labels: string[];
   };
+  ignoring?: string[];
   labelMappings?: Array<{ left: string; right: string }>;
 }
 
