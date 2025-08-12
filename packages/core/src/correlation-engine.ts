@@ -166,7 +166,7 @@ export class CorrelationEngine extends EventEmitter {
 
   private parseQuery(query: string): ParsedQuery {
     // Simplified query parsing - in production would use proper parser
-    // Example: loki({service="frontend"})[5m] and on(request_id) loki({service="backend"})[5m]
+    // Example: loki({service="frontend"})[5m] and on(request_id) group_left(session_id) loki({service="backend"})[5m]
     
     const joinMatch = query.match(/\b(and|or|unless)\s+on\s*\(([^)]+)\)/i);
     if (!joinMatch) {
@@ -191,6 +191,19 @@ export class CorrelationEngine extends EventEmitter {
         // Regular join key
         joinKeys.push(key);
       }
+    }
+
+    // Check for grouping modifiers (group_left or group_right)
+    let grouping: { side: 'left' | 'right'; labels: string[] } | undefined;
+    const groupLeftMatch = query.match(/group_left\s*\(([^)]*)\)/i);
+    const groupRightMatch = query.match(/group_right\s*\(([^)]*)\)/i);
+    
+    if (groupLeftMatch) {
+      const labels = groupLeftMatch[1] ? groupLeftMatch[1].split(',').map(l => l.trim()).filter(l => l) : [];
+      grouping = { side: 'left', labels };
+    } else if (groupRightMatch) {
+      const labels = groupRightMatch[1] ? groupRightMatch[1].split(',').map(l => l.trim()).filter(l => l) : [];
+      grouping = { side: 'right', labels };
     }
 
     // Check for temporal constraint
@@ -224,6 +237,7 @@ export class CorrelationEngine extends EventEmitter {
       joinKeys,
       timeWindow: streams[0].timeRange,
       temporal,
+      grouping,
       labelMappings: labelMappings.length > 0 ? labelMappings : undefined
     };
   }

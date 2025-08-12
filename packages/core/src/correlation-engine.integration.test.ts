@@ -340,6 +340,161 @@ describe('CorrelationEngine Integration', () => {
         expect(frontendEvents).toHaveLength(1);
         expect(backendEvents).toHaveLength(1);
       });
+
+      // Verify distinct correlations based on session_id
+      const sessionIds = results.map(r => 
+        r.events.find(e => e.labels.service === 'frontend')!.labels.session_id
+      ).sort();
+      expect(sessionIds).toEqual(['session1', 'session2']);
+    });
+
+    it('should handle group_right for one-to-many joins', async () => {
+      const events: LogEvent[] = [
+        // Single frontend event
+        { 
+          timestamp: new Date().toISOString(), 
+          source: 'mock', 
+          message: 'Frontend',
+          labels: { service: 'frontend', request_id: 'req1', user_id: 'user123' }
+        },
+        // Multiple backend events
+        { 
+          timestamp: new Date().toISOString(), 
+          source: 'mock', 
+          message: 'Backend 1',
+          labels: { service: 'backend', request_id: 'req1', operation: 'auth' }
+        },
+        { 
+          timestamp: new Date().toISOString(), 
+          source: 'mock', 
+          message: 'Backend 2',
+          labels: { service: 'backend', request_id: 'req1', operation: 'validate' }
+        }
+      ];
+
+      engine.addAdapter('mock', new MockAdapter(events));
+
+      const query = `
+        mock({service="frontend"})[5m]
+          and on(request_id) group_right(operation)
+          mock({service="backend"})[5m]
+      `;
+
+      const results: CorrelatedEvent[] = [];
+      for await (const correlation of engine.correlate(query)) {
+        results.push(correlation);
+      }
+
+      // Should create 2 correlations (one per backend event)
+      expect(results).toHaveLength(2);
+      
+      // Each correlation should have the frontend event and one backend event
+      results.forEach(result => {
+        expect(result.events).toHaveLength(2);
+        const frontendEvents = result.events.filter(e => e.labels.service === 'frontend');
+        const backendEvents = result.events.filter(e => e.labels.service === 'backend');
+        expect(frontendEvents).toHaveLength(1);
+        expect(backendEvents).toHaveLength(1);
+      });
+
+      // Verify distinct correlations based on operation
+      const operations = results.map(r => 
+        r.events.find(e => e.labels.service === 'backend')!.labels.operation
+      ).sort();
+      expect(operations).toEqual(['auth', 'validate']);
+    });
+
+    it('should handle group_left with multiple join keys', async () => {
+      const events: LogEvent[] = [
+        // Multiple frontend events with same request_id but different user_id
+        { 
+          timestamp: new Date().toISOString(), 
+          source: 'mock', 
+          message: 'Frontend User 1',
+          labels: { service: 'frontend', request_id: 'req1', user_id: 'user1' }
+        },
+        { 
+          timestamp: new Date().toISOString(), 
+          source: 'mock', 
+          message: 'Frontend User 2',
+          labels: { service: 'frontend', request_id: 'req1', user_id: 'user2' }
+        },
+        // Backend event matching the request_id
+        { 
+          timestamp: new Date().toISOString(), 
+          source: 'mock', 
+          message: 'Backend Processing',
+          labels: { service: 'backend', request_id: 'req1', user_id: '' }
+        }
+      ];
+
+      engine.addAdapter('mock', new MockAdapter(events));
+
+      const query = `
+        mock({service="frontend"})[5m]
+          and on(request_id) group_left(user_id)
+          mock({service="backend"})[5m]
+      `;
+
+      const results: CorrelatedEvent[] = [];
+      for await (const correlation of engine.correlate(query)) {
+        results.push(correlation);
+      }
+
+      // Should create 2 correlations (one per frontend event)
+      expect(results).toHaveLength(2);
+      
+      // Verify each correlation has distinct left event but same right event
+      const frontendUserIds = results.map(r => 
+        r.events.find(e => e.labels.service === 'frontend')!.labels.user_id
+      ).sort();
+      expect(frontendUserIds).toEqual(['user1', 'user2']);
+      
+      // All correlations should include the same backend event
+      results.forEach(result => {
+        const backendEvent = result.events.find(e => e.labels.service === 'backend');
+        expect(backendEvent!.message).toBe('Backend Processing');
+      });
+    });
+
+    it('should handle empty group modifier labels', async () => {
+      const events: LogEvent[] = [
+        { 
+          timestamp: new Date().toISOString(), 
+          source: 'mock', 
+          message: 'Left 1',
+          labels: { service: 'left', id: 'id1' }
+        },
+        { 
+          timestamp: new Date().toISOString(), 
+          source: 'mock', 
+          message: 'Left 2',
+          labels: { service: 'left', id: 'id1' }
+        },
+        { 
+          timestamp: new Date().toISOString(), 
+          source: 'mock', 
+          message: 'Right 1',
+          labels: { service: 'right', id: 'id1' }
+        }
+      ];
+
+      engine.addAdapter('mock', new MockAdapter(events));
+
+      // Empty parentheses for group_left should still work
+      const query = `
+        mock({service="left"})[5m]
+          and on(id) group_left()
+          mock({service="right"})[5m]
+      `;
+
+      const results: CorrelatedEvent[] = [];
+      for await (const correlation of engine.correlate(query)) {
+        results.push(correlation);
+      }
+
+      // Should create 2 correlations (one per left event)
+      expect(results).toHaveLength(2);
     });
   });
 
