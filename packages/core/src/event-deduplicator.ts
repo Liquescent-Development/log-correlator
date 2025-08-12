@@ -58,7 +58,7 @@ export class EventDeduplicator {
 
   private computeHash(event: LogEvent): string {
     const fields = this.options.hashFields || ['timestamp', 'message', 'source'];
-    const data: any = {};
+    const data: Record<string, string | undefined> = {};
     
     // Extract specified fields for hashing
     for (const field of fields) {

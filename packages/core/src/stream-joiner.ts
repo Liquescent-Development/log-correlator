@@ -1,6 +1,5 @@
 import { LogEvent, CorrelatedEvent, JoinType } from './types';
 import { TimeWindow } from './time-window';
-import { parseTimeWindow } from './utils';
 
 export interface StreamJoinerOptions {
   joinType: JoinType;
@@ -8,7 +7,7 @@ export interface StreamJoinerOptions {
   timeWindow: number;
   lateTolerance: number;
   maxEvents: number;
-  temporal?: string;
+  temporal?: number;
   labelMappings?: Array<{ left: string; right: string }>;
   filter?: string;
 }
@@ -33,10 +32,8 @@ export class StreamJoiner {
 
     // Start correlation checking
     const correlationInterval = setInterval(() => {
-      const correlations = this.findCorrelations(leftEvents, rightEvents);
-      for (const correlation of correlations) {
-        // Yield is not directly possible in setInterval, store for later
-      }
+      // TODO: Process correlations in real-time
+      // this.findCorrelations(leftEvents, rightEvents);
     }, 100);
 
     try {
@@ -67,7 +64,7 @@ export class StreamJoiner {
   private async processStream(
     stream: AsyncIterable<LogEvent>,
     storage: Map<string, LogEvent[]>,
-    streamName: string
+    _streamName: string
   ): Promise<void> {
     for await (const event of stream) {
       // Extract join key value
@@ -80,6 +77,36 @@ export class StreamJoiner {
       }
       storage.get(joinKeyValue)!.push(event);
     }
+  }
+
+  private filterByTemporal(
+    leftEvents: LogEvent[],
+    rightEvents: LogEvent[],
+    temporalMs: number
+  ): LogEvent[] {
+    const allEvents: LogEvent[] = [];
+    
+    // For each left event, check if there's a right event within temporal window
+    for (const leftEvent of leftEvents) {
+      const leftTime = new Date(leftEvent.timestamp).getTime();
+      
+      for (const rightEvent of rightEvents) {
+        const rightTime = new Date(rightEvent.timestamp).getTime();
+        const timeDiff = Math.abs(rightTime - leftTime);
+        
+        if (timeDiff <= temporalMs) {
+          // Events are within temporal window, include both
+          if (!allEvents.includes(leftEvent)) {
+            allEvents.push(leftEvent);
+          }
+          if (!allEvents.includes(rightEvent)) {
+            allEvents.push(rightEvent);
+          }
+        }
+      }
+    }
+    
+    return allEvents;
   }
 
   private extractJoinKey(event: LogEvent): string | null {
@@ -118,11 +145,32 @@ export class StreamJoiner {
       for (const [key, leftEventList] of leftEvents) {
         if (rightEvents.has(key) && !processedKeys.has(key)) {
           const rightEventList = rightEvents.get(key)!;
-          correlations.push(this.createCorrelation(
-            key,
-            [...leftEventList, ...rightEventList],
-            'complete'
-          ));
+          
+          // Apply temporal constraint if specified
+          if (this.options.temporal !== undefined) {
+            // Check if events are within temporal window
+            const filteredEvents = this.filterByTemporal(
+              leftEventList, 
+              rightEventList, 
+              this.options.temporal
+            );
+            
+            if (filteredEvents.length === 0) {
+              continue; // Skip this correlation if no events match temporal constraint
+            }
+            
+            correlations.push(this.createCorrelation(
+              key,
+              filteredEvents,
+              'complete'
+            ));
+          } else {
+            correlations.push(this.createCorrelation(
+              key,
+              [...leftEventList, ...rightEventList],
+              'complete'
+            ));
+          }
           processedKeys.add(key);
         }
       }

@@ -1,12 +1,38 @@
-import { ParsedQuery, StreamQuery, JoinType } from '@liquescent/log-correlator-core';
-// @ts-ignore - Generated file
-import * as generatedParser from './generated/parser.js';
+import { ParsedQuery, StreamQuery } from '@liquescent/log-correlator-core';
 
-interface ParseError {
-  line: number;
-  column: number;
-  message: string;
+// Type definition for the generated parser
+interface GeneratedParser {
+  parse(input: string): ParseResult;
 }
+
+interface ParseResult {
+  leftStream: StreamQuery;
+  rightStream: StreamQuery & { join?: JoinInfo };
+  joinType?: string;
+  joinKeys?: string[];
+  temporal?: string;
+  grouping?: { side: string; labels?: string[] };
+  labelMappings?: LabelMapping[];
+  filter?: string;
+  additionalStreams?: StreamQuery[];
+}
+
+interface JoinInfo {
+  type?: string;
+  keys?: string[];
+  temporal?: string;
+  grouping?: { side: string; labels?: string[] };
+  labelMappings?: LabelMapping[];
+}
+
+// Generated file - typed import
+const generatedParser: GeneratedParser = require('./generated/parser.js');
+
+// interface ParseError {
+//   line: number;
+//   column: number;
+//   message: string;
+// }
 
 interface LabelMapping {
   left: string;
@@ -24,18 +50,19 @@ export class PeggyQueryParser {
     try {
       const result = generatedParser.parse(query);
       return this.transformParseResult(result);
-    } catch (error: any) {
-      if (error.location) {
+    } catch (error) {
+      if (error && typeof error === 'object' && 'location' in error) {
+        const parseError = error as { location: { start: { line: number; column: number } }; message: string };
         throw new Error(
-          `Query parse error at line ${error.location.start.line}, ` +
-          `column ${error.location.start.column}: ${error.message}`
+          `Query parse error at line ${parseError.location.start.line}, ` +
+          `column ${parseError.location.start.column}: ${parseError.message}`
         );
       }
       throw error;
     }
   }
 
-  private transformParseResult(result: any): ParsedQueryExtended {
+  private transformParseResult(result: ParseResult): ParsedQueryExtended {
     // Extract join info from the right stream (where it's attached by the grammar)
     const join = result.rightStream?.join || {};
     
@@ -84,7 +111,7 @@ export class PeggyQueryParser {
     
     // Determine context based on position
     const beforeCursor = query.substring(0, position);
-    const afterCursor = query.substring(position);
+    // const afterCursor = query.substring(position);
     
     // Check what comes before cursor
     if (beforeCursor.match(/\s+$/)) {

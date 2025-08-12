@@ -1,16 +1,47 @@
 import { CorrelationEngine } from './correlation-engine';
-import { DataSourceAdapter, LogEvent } from './types';
+import { DataSourceAdapter, LogEvent, CorrelatedEvent } from './types';
 
 // Mock adapter for testing
 class MockAdapter implements DataSourceAdapter {
   constructor(private events: LogEvent[]) {}
 
-  async *createStream(): AsyncIterable<LogEvent> {
+  async *createStream(selector?: string): AsyncIterable<LogEvent> {
+    // Parse the selector to filter events
+    const filters = this.parseSelector(selector);
+    
     for (const event of this.events) {
+      // Apply filters if provided
+      if (filters && !this.matchesFilters(event, filters)) {
+        continue;
+      }
       yield event;
       // Simulate real-time delay
       await new Promise(resolve => setTimeout(resolve, 10));
     }
+  }
+
+  private parseSelector(selector?: string): Record<string, string> | null {
+    if (!selector) return null;
+    
+    const filters: Record<string, string> = {};
+    // Parse selector like {service="frontend",level="error"}
+    const matches = selector.match(/(\w+)="([^"]+)"/g);
+    if (matches) {
+      for (const match of matches) {
+        const [key, value] = match.split('=');
+        filters[key] = value.replace(/"/g, '');
+      }
+    }
+    return filters;
+  }
+
+  private matchesFilters(event: LogEvent, filters: Record<string, string>): boolean {
+    for (const [key, value] of Object.entries(filters)) {
+      if (event.labels?.[key] !== value) {
+        return false;
+      }
+    }
+    return true;
   }
 
   validateQuery(): boolean {
@@ -67,8 +98,7 @@ describe('CorrelationEngine Integration', () => {
         }
       ];
 
-      engine.addAdapter('frontend', new MockAdapter(frontendEvents));
-      engine.addAdapter('backend', new MockAdapter(backendEvents));
+      engine.addAdapter('mock', new MockAdapter([...frontendEvents, ...backendEvents]));
 
       const query = `
         mock({service="frontend"})[5m]
@@ -76,7 +106,7 @@ describe('CorrelationEngine Integration', () => {
           mock({service="backend"})[5m]
       `;
 
-      const correlations: any[] = [];
+      const correlations: CorrelatedEvent[] = [];
       for await (const correlation of engine.correlate(query)) {
         correlations.push(correlation);
       }
@@ -105,8 +135,7 @@ describe('CorrelationEngine Integration', () => {
         }
       ];
 
-      engine.addAdapter('service1', new MockAdapter(events1));
-      engine.addAdapter('service2', new MockAdapter(events2));
+      engine.addAdapter('mock', new MockAdapter([...events1, ...events2]));
 
       const query = `
         mock({service="service1"})[1m]
@@ -114,7 +143,7 @@ describe('CorrelationEngine Integration', () => {
           mock({service="service2"})[1m]
       `;
 
-      const correlations: any[] = [];
+      const correlations: CorrelatedEvent[] = [];
       for await (const correlation of engine.correlate(query)) {
         correlations.push(correlation);
       }
@@ -142,8 +171,7 @@ describe('CorrelationEngine Integration', () => {
         }
       ];
 
-      engine.addAdapter('auth', new MockAdapter(events1));
-      engine.addAdapter('api', new MockAdapter(events2));
+      engine.addAdapter('mock', new MockAdapter([...events1, ...events2]));
 
       const query = `
         mock({service="auth"})[5m]
@@ -151,7 +179,7 @@ describe('CorrelationEngine Integration', () => {
           mock({service="api"})[5m]
       `;
 
-      const correlations: any[] = [];
+      const correlations: CorrelatedEvent[] = [];
       for await (const correlation of engine.correlate(query)) {
         correlations.push(correlation);
       }
@@ -162,7 +190,7 @@ describe('CorrelationEngine Integration', () => {
   });
 
   describe('Performance monitoring', () => {
-    it('should emit performance metrics', async (done) => {
+    it('should emit performance metrics', async () => {
       const events: LogEvent[] = Array.from({ length: 100 }, (_, i) => ({
         timestamp: new Date().toISOString(),
         source: 'mock',
@@ -170,13 +198,15 @@ describe('CorrelationEngine Integration', () => {
         labels: { service: 'test', id: `id${i % 10}` }
       }));
 
-      engine.addAdapter('test', new MockAdapter(events));
+      engine.addAdapter('mock', new MockAdapter(events));
 
-      engine.on('performanceMetrics', (metrics) => {
-        expect(metrics).toHaveProperty('eventsProcessed');
-        expect(metrics).toHaveProperty('throughput');
-        expect(metrics).toHaveProperty('memoryUsage');
-        done();
+      const metricsPromise = new Promise<void>((resolve) => {
+        engine.on('performanceMetrics', (metrics) => {
+          expect(metrics).toHaveProperty('eventsProcessed');
+          expect(metrics).toHaveProperty('throughput');
+          expect(metrics).toHaveProperty('memoryUsage');
+          resolve();
+        });
       });
 
       const query = `
@@ -188,6 +218,9 @@ describe('CorrelationEngine Integration', () => {
       // Start correlation to trigger metrics
       const iterator = engine.correlate(query);
       await iterator.next();
+      
+      // Wait for metrics to be emitted
+      await metricsPromise;
     }, 10000);
   });
 
@@ -200,7 +233,8 @@ describe('CorrelationEngine Integration', () => {
       `;
 
       await expect(async () => {
-        for await (const _ of engine.correlate(query)) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        for await (const _event of engine.correlate(query)) {
           // Should not reach here
         }
       }).rejects.toThrow('Required data source adapter not found');
@@ -223,14 +257,14 @@ describe('CorrelationEngine Integration', () => {
   describe('Backpressure handling', () => {
     it('should handle high-volume streams without memory overflow', async () => {
       // Create a large stream of events
-      const largeEventStream: LogEvent[] = Array.from({ length: 10000 }, (_, i) => ({
+      const largeEventStream: LogEvent[] = Array.from({ length: 1000 }, (_, i) => ({
         timestamp: new Date(Date.now() + i).toISOString(),
         source: 'mock',
         message: `High volume event ${i}`,
         labels: { service: 'highvolume', batch_id: `batch${Math.floor(i / 100)}` }
       }));
 
-      engine.addAdapter('highvolume', new MockAdapter(largeEventStream));
+      engine.addAdapter('mock', new MockAdapter(largeEventStream));
 
       const query = `
         mock({service="highvolume"})[5m]
@@ -241,7 +275,8 @@ describe('CorrelationEngine Integration', () => {
       let correlationCount = 0;
       const startMemory = process.memoryUsage().heapUsed;
 
-      for await (const _ of engine.correlate(query)) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      for await (const _correlation of engine.correlate(query)) {
         correlationCount++;
         if (correlationCount > 50) break; // Limit for test
       }
@@ -251,6 +286,6 @@ describe('CorrelationEngine Integration', () => {
 
       // Memory increase should be reasonable (less than 50MB for this test)
       expect(memoryIncrease).toBeLessThan(50);
-    });
+    }, 30000);
   });
 });

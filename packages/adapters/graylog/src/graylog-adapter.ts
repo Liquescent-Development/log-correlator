@@ -16,7 +16,7 @@ interface GraylogMessage {
   message: string;
   timestamp: string;
   source: string;
-  fields: Record<string, any>;
+  fields: Record<string, unknown>;
   _id: string;
 }
 
@@ -60,8 +60,8 @@ export class GraylogAdapter implements DataSourceAdapter {
     return 'graylog';
   }
 
-  async *createStream(query: string, options?: any): AsyncIterable<LogEvent> {
-    const timeRange = options?.timeRange || '5m';
+  async *createStream(query: string, options?: unknown): AsyncIterable<LogEvent> {
+    const timeRange = (options as { timeRange?: string })?.timeRange || '5m';
     yield* this.createPollingStream(query, timeRange);
   }
 
@@ -77,7 +77,7 @@ export class GraylogAdapter implements DataSourceAdapter {
         const now = new Date();
         const from = new Date(now.getTime() - timeWindowMs);
         
-        const searchParams: any = {
+        const searchParams: Record<string, unknown> = {
           query: this.convertToGraylogQuery(query),
           from: from.toISOString(),
           to: now.toISOString(),
@@ -129,20 +129,21 @@ export class GraylogAdapter implements DataSourceAdapter {
     }
   }
 
-  private async search(params: any, signal: AbortSignal): Promise<GraylogSearchResponse> {
+  private async search(params: Record<string, unknown>, signal: AbortSignal): Promise<GraylogSearchResponse> {
     const url = `${this.options.url}/api/search/universal/relative`;
-    const queryParams = new URLSearchParams(params);
+    const queryParams = new URLSearchParams(params as Record<string, string>);
 
-    const response = await fetch(`${url}?${queryParams}`, {
+    const fetchOptions: RequestInit = {
       method: 'GET',
       headers: {
         'Authorization': this.authHeader,
         'Accept': 'application/json',
         'X-Requested-By': 'log-correlator'
       },
-      signal,
-      timeout: this.options.timeout
-    } as any);
+      signal
+    };
+    
+    const response = await fetch(`${url}?${queryParams}`, fetchOptions);
 
     if (!response.ok) {
       throw new CorrelationError(
@@ -278,8 +279,7 @@ export class GraylogAdapter implements DataSourceAdapter {
           'Accept': 'application/json',
           'X-Requested-By': 'log-correlator'
         },
-        timeout: this.options.timeout
-      } as any);
+      });
 
       if (!response.ok) {
         throw new CorrelationError(
@@ -289,7 +289,7 @@ export class GraylogAdapter implements DataSourceAdapter {
       }
 
       const data = await response.json();
-      return data.streams?.map((s: any) => s.title) || [];
+      return data.streams?.map((s: { title: string }) => s.title) || [];
     } catch (error) {
       console.error('Failed to get available streams:', error);
       return [];

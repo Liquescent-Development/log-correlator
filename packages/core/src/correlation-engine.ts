@@ -2,7 +2,6 @@ import { EventEmitter } from 'eventemitter3';
 import {
   CorrelationEngineOptions,
   DataSourceAdapter,
-  LogEvent,
   CorrelatedEvent,
   CorrelationError,
   ParsedQuery
@@ -133,7 +132,9 @@ export class CorrelationEngine extends EventEmitter {
       joinKeys: parsedQuery.joinKeys,
       timeWindow: parseTimeWindow(parsedQuery.timeWindow || this.options.defaultTimeWindow),
       lateTolerance: this.options.lateTolerance as number,
-      maxEvents: this.options.maxEvents
+      maxEvents: this.options.maxEvents,
+      temporal: parsedQuery.temporal ? parseTimeWindow(parsedQuery.temporal) : undefined,
+      labelMappings: parsedQuery.labelMappings
     });
 
     this.activeJoiners.add(joiner);
@@ -169,11 +170,32 @@ export class CorrelationEngine extends EventEmitter {
     }
 
     const joinType = joinMatch[1].toLowerCase() as 'and' | 'or' | 'unless';
-    const joinKeys = joinMatch[2].split(',').map(k => k.trim());
+    const joinKeysRaw = joinMatch[2].split(',').map(k => k.trim());
+    
+    // Parse join keys and check for label mappings
+    const joinKeys: string[] = [];
+    const labelMappings: Array<{ left: string; right: string }> = [];
+    
+    for (const key of joinKeysRaw) {
+      if (key.includes('=')) {
+        // This is a label mapping
+        const [left, right] = key.split('=').map(k => k.trim());
+        labelMappings.push({ left, right });
+        // Also add both keys to joinKeys for compatibility
+        joinKeys.push(left, right);
+      } else {
+        // Regular join key
+        joinKeys.push(key);
+      }
+    }
+
+    // Check for temporal constraint
+    const temporalMatch = query.match(/within\s*\(([^)]+)\)/i);
+    const temporal = temporalMatch ? temporalMatch[1] : undefined;
 
     // Extract stream queries (simplified)
     const streamPattern = /(\w+)\s*\(([^)]+)\)\s*\[([^\]]+)\]/g;
-    const streams: any[] = [];
+    const streams: StreamQuery[] = [];
     let match;
 
     while ((match = streamPattern.exec(query)) !== null) {
@@ -196,7 +218,9 @@ export class CorrelationEngine extends EventEmitter {
       rightStream: streams[1],
       joinType,
       joinKeys,
-      timeWindow: streams[0].timeRange
+      timeWindow: streams[0].timeRange,
+      temporal,
+      labelMappings: labelMappings.length > 0 ? labelMappings : undefined
     };
   }
 
@@ -218,10 +242,7 @@ export class CorrelationEngine extends EventEmitter {
 
   private startGarbageCollection(): void {
     setInterval(() => {
-      // Clean up inactive joiners
-      for (const joiner of this.activeJoiners) {
-        // Joiners handle their own cleanup
-      }
+      // Clean up inactive joiners (they handle their own cleanup)
 
       // Check memory usage
       const memoryUsage = process.memoryUsage();

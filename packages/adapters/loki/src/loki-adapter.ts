@@ -41,8 +41,8 @@ export class LokiAdapter implements DataSourceAdapter {
     return 'loki';
   }
 
-  async *createStream(query: string, options?: any): AsyncIterable<LogEvent> {
-    const timeRange = options?.timeRange || '5m';
+  async *createStream(query: string, options?: unknown): AsyncIterable<LogEvent> {
+    const timeRange = (options as { timeRange?: string })?.timeRange || '5m';
     
     if (this.options.websocket) {
       yield* this.createWebSocketStream(query, timeRange);
@@ -51,7 +51,7 @@ export class LokiAdapter implements DataSourceAdapter {
     }
   }
 
-  private async *createWebSocketStream(query: string, timeRange: string): AsyncIterable<LogEvent> {
+  private async *createWebSocketStream(query: string, _timeRange: string): AsyncIterable<LogEvent> {
     const wsUrl = this.options.url.replace(/^http/, 'ws');
     const fullUrl = `${wsUrl}/loki/api/v1/tail?query=${encodeURIComponent(query)}`;
 
@@ -115,7 +115,7 @@ export class LokiAdapter implements DataSourceAdapter {
     }
   }
 
-  private async *createPollingStream(query: string, timeRange: string): AsyncIterable<LogEvent> {
+  private async *createPollingStream(query: string, _timeRange: string): AsyncIterable<LogEvent> {
     const controller = new AbortController();
     this.activeStreams.add(controller);
 

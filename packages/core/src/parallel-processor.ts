@@ -8,12 +8,12 @@ export interface ParallelProcessorOptions {
   taskQueueSize?: number;
 }
 
-interface WorkerTask {
+interface WorkerTask<T = unknown> {
   id: string;
   type: 'correlate' | 'deduplicate' | 'index';
-  data: any;
-  resolve: (value: any) => void;
-  reject: (error: any) => void;
+  data: T;
+  resolve: (value: T) => void;
+  reject: (error: Error) => void;
 }
 
 /**

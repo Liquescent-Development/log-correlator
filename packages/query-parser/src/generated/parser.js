@@ -2,6 +2,8 @@
 //
 // https://peggyjs.org/
 
+"use strict";
+
 function peg$subclass(child, parent) {
   function C() { this.constructor = child; }
   C.prototype = parent.prototype;
@@ -2029,8 +2031,7 @@ function peg$parse(input, options) {
   }
 }
 
-export {
-  peg$SyntaxError as SyntaxError,
-
-  peg$parse as parse
+module.exports = {
+  SyntaxError: peg$SyntaxError,
+  parse: peg$parse
 };

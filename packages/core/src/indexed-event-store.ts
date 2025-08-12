@@ -175,7 +175,7 @@ export class IndexedEventStore {
       
       // Remove from join key indexes
       for (const { event } of removedEvents) {
-        for (const [key, index] of this.joinKeyIndex) {
+        for (const [, index] of this.joinKeyIndex) {
           for (const [value, events] of index) {
             const idx = events.indexOf(event);
             if (idx >= 0) {

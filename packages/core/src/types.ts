@@ -42,8 +42,14 @@ export interface CorrelationEngineOptions {
   gcInterval?: string | number;
 }
 
+export interface StreamOptions {
+  timeRange?: string;
+  limit?: number;
+  [key: string]: unknown;
+}
+
 export interface DataSourceAdapter {
-  createStream(query: string, options?: any): AsyncIterable<LogEvent>;
+  createStream(query: string, options?: StreamOptions): AsyncIterable<LogEvent>;
   validateQuery(query: string): boolean;
   getName(): string;
   getAvailableStreams?(): Promise<string[]>;
@@ -52,9 +58,9 @@ export interface DataSourceAdapter {
 
 export class CorrelationError extends Error {
   code: string;
-  details?: any;
+  details?: unknown;
 
-  constructor(message: string, code: string, details?: any) {
+  constructor(message: string, code: string, details?: unknown) {
     super(message);
     this.name = 'CorrelationError';
     this.code = code;
@@ -75,6 +81,7 @@ export interface ParsedQuery {
     side: 'left' | 'right';
     labels: string[];
   };
+  labelMappings?: Array<{ left: string; right: string }>;
 }
 
 export interface StreamQuery {

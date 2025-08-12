@@ -49,8 +49,8 @@ export class MultiStreamJoiner {
 
     // Start correlation checking
     const correlationInterval = setInterval(() => {
-      const correlations = this.findMultiStreamCorrelations(streamData);
-      // Store correlations for yielding after promises complete
+      // TODO: Process correlations in real-time
+      // this.findMultiStreamCorrelations(streamData);
     }, 100);
 
     try {
@@ -72,7 +72,7 @@ export class MultiStreamJoiner {
   private async processStream(
     stream: AsyncIterable<LogEvent>,
     storage: Map<string, LogEvent[]>,
-    streamName: string
+    _streamName: string
   ): Promise<void> {
     for await (const event of stream) {
       const joinKeyValue = this.extractJoinKey(event);
