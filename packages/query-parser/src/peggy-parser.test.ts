@@ -87,6 +87,14 @@ describe('PeggyQueryParser', () => {
       expect(result.filter).toBe('{status=~"4..|5.."}');
     });
 
+    it('should parse complex filters', () => {
+      const query = `loki({service="frontend"})[5m] and on(request_id) loki({service="backend"})[5m] {status=~"4..|5..",level!="debug"}`;
+
+      const result = parser.parse(query);
+      
+      expect(result.filter).toBe('{status=~"4..|5..",level!="debug"}');
+    });
+
     it('should parse multiple label matchers', () => {
       const query = `loki({service="frontend",level="error",instance!="localhost"})[5m] and on(request_id) loki({service="backend"})[5m]`;
 

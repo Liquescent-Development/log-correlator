@@ -83,6 +83,7 @@ export interface ParsedQuery {
   };
   ignoring?: string[];
   labelMappings?: Array<{ left: string; right: string }>;
+  filter?: string;
 }
 
 export interface StreamQuery {

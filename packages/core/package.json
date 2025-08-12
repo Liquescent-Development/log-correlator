@@ -21,7 +21,8 @@
   "author": "",
   "license": "Apache-2.0",
   "dependencies": {
-    "eventemitter3": "^5.0.1"
+    "eventemitter3": "^5.0.1",
+    "lru-cache": "^11.1.0"
   },
   "devDependencies": {
     "@types/jest": "^29.5.0",

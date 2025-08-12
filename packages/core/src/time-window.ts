@@ -1,4 +1,5 @@
 import { LogEvent } from './types';
+import { LRUCache } from 'lru-cache';
 
 export interface TimeWindowOptions {
   windowSize: number;
@@ -7,7 +8,7 @@ export interface TimeWindowOptions {
 }
 
 export class TimeWindow {
-  private events: Map<string, LogEvent[]> = new Map();
+  private events: LRUCache<string, LogEvent[]>;
   private windowStart: number;
   private windowEnd: number;
   private eventCount = 0;
@@ -16,6 +17,17 @@ export class TimeWindow {
     const now = Date.now();
     this.windowStart = now;
     this.windowEnd = now + options.windowSize;
+    
+    // Initialize LRU cache with max size based on estimated keys
+    // Assuming average of 10 events per key, max keys = maxEvents / 10
+    const maxKeys = Math.max(100, Math.floor(options.maxEvents / 10));
+    this.events = new LRUCache<string, LogEvent[]>({
+      max: maxKeys,
+      // Optional: set TTL to window size + late tolerance
+      ttl: options.windowSize + options.lateTolerance,
+      // Update age on get to keep active keys
+      updateAgeOnGet: true
+    });
   }
 
   addEvent(event: LogEvent, key: string): boolean {
@@ -51,7 +63,7 @@ export class TimeWindow {
   }
 
   getAllKeys(): string[] {
-    return Array.from(this.events.keys());
+    return [...this.events.keys()];
   }
 
   isExpired(currentTime: number): boolean {

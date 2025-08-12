@@ -137,7 +137,8 @@ export class CorrelationEngine extends EventEmitter {
       temporal: parsedQuery.temporal ? parseTimeWindow(parsedQuery.temporal) : undefined,
       ignoring: parsedQuery.ignoring,
       grouping: parsedQuery.grouping,
-      labelMappings: parsedQuery.labelMappings
+      labelMappings: parsedQuery.labelMappings,
+      filter: parsedQuery.filter
     });
 
     this.activeJoiners.add(joiner);

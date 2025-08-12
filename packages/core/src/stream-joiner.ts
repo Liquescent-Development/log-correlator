@@ -171,21 +171,27 @@ export class StreamJoiner {
               // group_left: Keep all left events, allow multiple right matches
               // Create one correlation per left event with all matching right events
               for (const leftEvent of leftEventList) {
-                correlations.push(this.createCorrelation(
+                const correlation = this.createCorrelation(
                   key,
                   [leftEvent, ...rightEventList],
                   'complete'
-                ));
+                );
+                if (correlation) {
+                  correlations.push(correlation);
+                }
               }
             } else {
               // group_right: Keep all right events, allow multiple left matches
               // Create one correlation per right event with all matching left events
               for (const rightEvent of rightEventList) {
-                correlations.push(this.createCorrelation(
+                const correlation = this.createCorrelation(
                   key,
                   [...leftEventList, rightEvent],
                   'complete'
-                ));
+                );
+                if (correlation) {
+                  correlations.push(correlation);
+                }
               }
             }
           } else {
@@ -203,17 +209,23 @@ export class StreamJoiner {
                 continue; // Skip this correlation if no events match temporal constraint
               }
               
-              correlations.push(this.createCorrelation(
+              const correlation = this.createCorrelation(
                 key,
                 filteredEvents,
                 'complete'
-              ));
+              );
+              if (correlation) {
+                correlations.push(correlation);
+              }
             } else {
-              correlations.push(this.createCorrelation(
+              const correlation = this.createCorrelation(
                 key,
                 [...leftEventList, ...rightEventList],
                 'complete'
-              ));
+              );
+              if (correlation) {
+                correlations.push(correlation);
+              }
             }
           }
           processedKeys.add(key);
@@ -224,11 +236,14 @@ export class StreamJoiner {
       for (const [key, leftEventList] of leftEvents) {
         if (!processedKeys.has(key)) {
           const rightEventList = rightEvents.get(key) || [];
-          correlations.push(this.createCorrelation(
+          const correlation = this.createCorrelation(
             key,
             [...leftEventList, ...rightEventList],
             rightEventList.length > 0 ? 'complete' : 'partial'
-          ));
+          );
+          if (correlation) {
+            correlations.push(correlation);
+          }
           processedKeys.add(key);
         }
       }
@@ -236,11 +251,14 @@ export class StreamJoiner {
       // Anti-join - only keys NOT in right
       for (const [key, leftEventList] of leftEvents) {
         if (!rightEvents.has(key) && !processedKeys.has(key)) {
-          correlations.push(this.createCorrelation(
+          const correlation = this.createCorrelation(
             key,
             leftEventList,
             'partial'
-          ));
+          );
+          if (correlation) {
+            correlations.push(correlation);
+          }
           processedKeys.add(key);
         }
       }
@@ -249,19 +267,100 @@ export class StreamJoiner {
     return correlations;
   }
 
+  private applyFilter(events: LogEvent[]): LogEvent[] {
+    if (!this.options.filter) {
+      return events;
+    }
+
+    // Parse filter expression like {status=~"4..|5.."}
+    const filterMatch = this.options.filter.match(/\{([^}]+)\}/);
+    if (!filterMatch) {
+      return events;
+    }
+
+    const filterExpr = filterMatch[1];
+    const matchers = this.parseMatchers(filterExpr);
+    
+    return events.filter(event => {
+      for (const matcher of matchers) {
+        const value = event.labels[matcher.label];
+        if (!this.matchValue(value, matcher.operator, matcher.value)) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }
+
+  private parseMatchers(expr: string): Array<{label: string, operator: string, value: string}> {
+    const matchers: Array<{label: string, operator: string, value: string}> = [];
+    // Split by comma, but not within quotes
+    const parts = expr.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/);
+    
+    for (const part of parts) {
+      const match = part.trim().match(/^([a-zA-Z_][a-zA-Z0-9_]*)\s*(=~|!~|!=|=)\s*"([^"]+)"$/);
+      if (match) {
+        matchers.push({
+          label: match[1],
+          operator: match[2],
+          value: match[3]
+        });
+      }
+    }
+    
+    return matchers;
+  }
+
+  private matchValue(actual: string | undefined, operator: string, expected: string): boolean {
+    if (!actual) {
+      return operator === '!=' || operator === '!~';
+    }
+
+    switch (operator) {
+      case '=':
+        return actual === expected;
+      case '!=':
+        return actual !== expected;
+      case '=~':
+        try {
+          const regex = new RegExp(expected);
+          return regex.test(actual);
+        } catch {
+          return false;
+        }
+      case '!~':
+        try {
+          const regex = new RegExp(expected);
+          return !regex.test(actual);
+        } catch {
+          return true;
+        }
+      default:
+        return false;
+    }
+  }
+
   private createCorrelation(
     joinValue: string,
     events: LogEvent[],
     completeness: 'complete' | 'partial'
   ): CorrelatedEvent {
+    // Apply filter if specified
+    const filteredEvents = this.applyFilter(events);
+    
+    if (filteredEvents.length === 0) {
+      // If filter removes all events, return null (handled by caller)
+      return null as any;
+    }
+    
     // Sort events by timestamp
-    events.sort((a, b) => 
+    filteredEvents.sort((a, b) => 
       new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
     );
 
-    const streams = new Set(events.map(e => e.source));
-    const earliestTime = events[0].timestamp;
-    const latestTime = events[events.length - 1].timestamp;
+    const streams = new Set(filteredEvents.map(e => e.source));
+    const earliestTime = filteredEvents[0].timestamp;
+    const latestTime = filteredEvents[filteredEvents.length - 1].timestamp;
 
     return {
       correlationId: `corr_${++this.correlationCounter}`,

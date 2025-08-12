@@ -111,7 +111,7 @@ describe('TimeWindow', () => {
       
       expect(window.getEvents('key1')).toHaveLength(2);
       expect(window.getEvents('key2')).toHaveLength(1);
-      expect(window.getAllKeys()).toEqual(['key1', 'key2']);
+      expect(window.getAllKeys().sort()).toEqual(['key1', 'key2']);
     });
   });
 

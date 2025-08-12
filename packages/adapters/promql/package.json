@@ -1,0 +1,31 @@
+{
+  "name": "@liquescent/log-correlator-promql",
+  "version": "1.0.0",
+  "description": "PromQL adapter for log-correlator",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest --passWithNoTests",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@liquescent/log-correlator-core": "^1.0.0",
+    "node-fetch": "^2.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^20.8.0",
+    "@types/node-fetch": "^2.6.4",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.1",
+    "typescript": "^5.2.2"
+  },
+  "keywords": [
+    "promql",
+    "prometheus",
+    "metrics",
+    "log-correlator"
+  ],
+  "author": "",
+  "license": "MIT"
+}
