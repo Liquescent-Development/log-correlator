@@ -496,7 +496,8 @@ describe('PromQLAdapter', () => {
       const streamIterator = adapter.createStream(query);
       
       // Should not throw error, just continue polling
-      const iteratorPromise = (() => { const iterator = streamIterator[Symbol.asyncIterator](); return iterator.next(); })();
+      const iterator = streamIterator[Symbol.asyncIterator]();
+      void iterator.next(); // Start the async iteration
       
       jest.advanceTimersByTime(10000);
       
@@ -518,7 +519,8 @@ describe('PromQLAdapter', () => {
       const streamIterator = adapter.createStream(query);
       
       // Start iteration
-      const iteratorPromise = (() => { const iterator = streamIterator[Symbol.asyncIterator](); return iterator.next(); })();
+      const iterator = streamIterator[Symbol.asyncIterator]();
+      void iterator.next(); // Start the async iteration
       
       await adapter.destroy();
       
@@ -975,7 +977,8 @@ describe('PromQLAdapter', () => {
       const streamIterator = adapter.createStream(query);
       
       // Start iteration
-      const iteratorPromise = (() => { const iterator = streamIterator[Symbol.asyncIterator](); return iterator.next(); })();
+      const iterator = streamIterator[Symbol.asyncIterator]();
+      void iterator.next(); // Start the async iteration
       
       await adapter.destroy();
       
@@ -998,9 +1001,9 @@ describe('PromQLAdapter', () => {
 
       // Start multiple streams
       const streamIterators = queries.map(query => adapter.createStream(query));
-      const iteratorPromises = streamIterators.map(iter => {
+      streamIterators.forEach(iter => {
         const iterator = iter[Symbol.asyncIterator]();
-        return iterator.next();
+        void iterator.next(); // Start the async iteration
       });
       
       await adapter.destroy();

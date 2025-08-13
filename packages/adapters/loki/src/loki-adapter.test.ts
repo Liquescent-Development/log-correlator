@@ -533,15 +533,8 @@ describe('LokiAdapter', () => {
 
       for (const message of testCases) {
         // We'll test this by creating a mock message and seeing if join keys are extracted
-        const mockEvent = {
-          timestamp: '2022-01-01T00:00:00.000Z',
-          source: 'loki',
-          stream: 'test',
-          message,
-          labels: {},
-          joinKeys: {}
-        };
-
+        // The actual extraction is tested indirectly through the adapter's message parsing
+        
         // This tests the private method indirectly through message parsing
         expect(message).toContain('request');
       }
@@ -683,7 +676,7 @@ describe('LokiAdapter', () => {
 
       // Start iteration
       const iterator = streamIterator[Symbol.asyncIterator]();
-      const resultPromise = iterator.next();
+      void iterator.next(); // Start the async iteration
 
       // Send malformed JSON
       setTimeout(() => {
