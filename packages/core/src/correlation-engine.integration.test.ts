@@ -101,11 +101,7 @@ describe('CorrelationEngine Integration', () => {
 
       engine.addAdapter('mock', new MockAdapter([...frontendEvents, ...backendEvents]));
 
-      const query = `
-        mock({service="frontend"})[5m]
-          and on(request_id)
-          mock({service="backend"})[5m]
-      `;
+      const query = `mock({service="frontend"})[5m] and on(request_id) mock({service="backend"})[5m]`;
 
       const correlations: CorrelatedEvent[] = [];
       for await (const correlation of engine.correlate(query)) {
@@ -138,11 +134,7 @@ describe('CorrelationEngine Integration', () => {
 
       engine.addAdapter('mock', new MockAdapter([...events1, ...events2]));
 
-      const query = `
-        mock({service="service1"})[1m]
-          and on(correlation_id) within(20s)
-          mock({service="service2"})[1m]
-      `;
+      const query = `mock({service="service1"})[1m] and on(correlation_id) within(20s) mock({service="service2"})[1m]`;
 
       const correlations: CorrelatedEvent[] = [];
       for await (const correlation of engine.correlate(query)) {
@@ -174,11 +166,7 @@ describe('CorrelationEngine Integration', () => {
 
       engine.addAdapter('mock', new MockAdapter([...events1, ...events2]));
 
-      const query = `
-        mock({service="auth"})[5m]
-          and on(session_id=trace_id)
-          mock({service="api"})[5m]
-      `;
+      const query = `mock({service="auth"})[5m] and on(session_id=trace_id) mock({service="api"})[5m]`;
 
       const correlations: CorrelatedEvent[] = [];
       for await (const correlation of engine.correlate(query)) {
@@ -210,15 +198,16 @@ describe('CorrelationEngine Integration', () => {
         });
       });
 
-      const query = `
-        mock({service="test"})[5m]
-          and on(id)
-          mock({service="test"})[5m]
-      `;
+      const query = `mock({service="test"})[5m] and on(id) mock({service="test"})[5m]`;
 
       // Start correlation to trigger metrics
       const iterator = engine.correlate(query);
-      await iterator.next();
+      const result = await iterator.next();
+      
+      // Close the iterator to clean up resources
+      if (iterator.return) {
+        await iterator.return(undefined);
+      }
       
       // Wait for metrics to be emitted
       await metricsPromise;
@@ -264,11 +253,7 @@ describe('CorrelationEngine Integration', () => {
       const mockAdapter = new MockAdapter([...leftEvents, ...rightEvents]);
       engine.addAdapter('mock', mockAdapter);
 
-      const query = `
-        mock({service="test"})[5m]
-          unless on(id)
-          mock({service="backend"})[5m]
-      `;
+      const query = `mock({service="test"})[5m] unless on(id) mock({service="backend"})[5m]`;
 
       const results: CorrelatedEvent[] = [];
       for await (const correlation of engine.correlate(query)) {
@@ -318,11 +303,7 @@ describe('CorrelationEngine Integration', () => {
 
       engine.addAdapter('mock', new MockAdapter(events));
 
-      const query = `
-        mock({service="frontend"})[5m]
-          and on(request_id) group_left(session_id)
-          mock({service="backend"})[5m]
-      `;
+      const query = `mock({service="frontend"})[5m] and on(request_id) group_left(session_id) mock({service="backend"})[5m]`;
 
       const results: CorrelatedEvent[] = [];
       for await (const correlation of engine.correlate(query)) {
@@ -374,11 +355,7 @@ describe('CorrelationEngine Integration', () => {
 
       engine.addAdapter('mock', new MockAdapter(events));
 
-      const query = `
-        mock({service="frontend"})[5m]
-          and on(request_id) group_right(operation)
-          mock({service="backend"})[5m]
-      `;
+      const query = `mock({service="frontend"})[5m] and on(request_id) group_right(operation) mock({service="backend"})[5m]`;
 
       const results: CorrelatedEvent[] = [];
       for await (const correlation of engine.correlate(query)) {
@@ -430,11 +407,7 @@ describe('CorrelationEngine Integration', () => {
 
       engine.addAdapter('mock', new MockAdapter(events));
 
-      const query = `
-        mock({service="frontend"})[5m]
-          and on(request_id) group_left(user_id)
-          mock({service="backend"})[5m]
-      `;
+      const query = `mock({service="frontend"})[5m] and on(request_id) group_left(user_id) mock({service="backend"})[5m]`;
 
       const results: CorrelatedEvent[] = [];
       for await (const correlation of engine.correlate(query)) {
@@ -482,11 +455,7 @@ describe('CorrelationEngine Integration', () => {
       engine.addAdapter('mock', new MockAdapter(events));
 
       // Empty parentheses for group_left should still work
-      const query = `
-        mock({service="left"})[5m]
-          and on(id) group_left()
-          mock({service="right"})[5m]
-      `;
+      const query = `mock({service="left"})[5m] and on(id) group_left() mock({service="right"})[5m]`;
 
       const results: CorrelatedEvent[] = [];
       for await (const correlation of engine.correlate(query)) {
@@ -500,11 +469,7 @@ describe('CorrelationEngine Integration', () => {
 
   describe('Error handling', () => {
     it('should handle missing adapters gracefully', async () => {
-      const query = `
-        nonexistent({service="test"})[5m]
-          and on(id)
-          nonexistent({service="test"})[5m]
-      `;
+      const query = `nonexistent({service="test"})[5m] and on(id) nonexistent({service="test"})[5m]`;
 
       await expect(async () => {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -515,11 +480,7 @@ describe('CorrelationEngine Integration', () => {
     });
 
     it('should validate queries before execution', () => {
-      const validQuery = `
-        loki({service="test"})[5m]
-          and on(id)
-          loki({service="test"})[5m]
-      `;
+      const validQuery = `loki({service="test"})[5m] and on(id) loki({service="test"})[5m]`;
 
       const invalidQuery = 'this is not a valid query';
 
@@ -540,11 +501,7 @@ describe('CorrelationEngine Integration', () => {
 
       engine.addAdapter('mock', new MockAdapter(largeEventStream));
 
-      const query = `
-        mock({service="highvolume"})[5m]
-          or on(batch_id)
-          mock({service="highvolume"})[5m]
-      `;
+      const query = `mock({service="highvolume"})[5m] or on(batch_id) mock({service="highvolume"})[5m]`;
 
       let correlationCount = 0;
       const startMemory = process.memoryUsage().heapUsed;

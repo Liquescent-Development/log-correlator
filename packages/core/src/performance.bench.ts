@@ -142,7 +142,7 @@ class PerformanceBenchmark {
     
     // Register adapters
     for (const [name, adapter] of adapters) {
-      engine.registerAdapter(name, adapter);
+      engine.addAdapter(name, adapter);
     }
     
     // Set up correlation listener

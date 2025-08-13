@@ -2,6 +2,7 @@ import { EventEmitter } from 'eventemitter3';
 import {
   CorrelationEngineOptions,
   DataSourceAdapter,
+  LogEvent,
   CorrelatedEvent,
   CorrelationError,
   ParsedQuery,
@@ -12,6 +13,7 @@ import { MultiStreamJoiner } from './multi-stream-joiner';
 import { BackpressureController } from './backpressure-controller';
 import { PerformanceMonitor } from './performance-monitor';
 import { parseTimeWindow } from './utils';
+import { PeggyQueryParser } from '@liquescent/log-correlator-query-parser';
 
 /**
  * Main correlation engine for real-time log stream processing
@@ -34,6 +36,8 @@ export class CorrelationEngine extends EventEmitter {
   private activeJoiners: Set<StreamJoiner | MultiStreamJoiner> = new Set();
   private performanceMonitor: PerformanceMonitor;
   private backpressureController?: BackpressureController;
+  private queryParser: PeggyQueryParser;
+  private gcInterval?: NodeJS.Timeout;
 
   constructor(options: CorrelationEngineOptions = {}) {
     super();
@@ -56,6 +60,9 @@ export class CorrelationEngine extends EventEmitter {
         : options.gcInterval || 30000
     };
 
+    // Initialize query parsers
+    this.queryParser = new PeggyQueryParser();
+    
     // Initialize performance monitor
     this.performanceMonitor = new PerformanceMonitor(5000);
     this.performanceMonitor.start();
@@ -101,145 +108,172 @@ export class CorrelationEngine extends EventEmitter {
     // Parse the query (simplified for now - would use full parser in production)
     const parsedQuery = this.parseQuery(query);
     
-    // Validate adapters exist
-    const leftAdapter = this.getAdapterForSource(parsedQuery.leftStream.source);
-    const rightAdapter = this.getAdapterForSource(parsedQuery.rightStream.source);
-
-    if (!leftAdapter || !rightAdapter) {
-      throw new CorrelationError(
-        'Required data source adapter not found',
-        'ADAPTER_NOT_FOUND',
-        { 
-          leftSource: parsedQuery.leftStream.source,
-          rightSource: parsedQuery.rightStream.source
-        }
-      );
+    // Check if this is a multi-stream query (3+ streams)
+    const allStreams = [parsedQuery.leftStream, parsedQuery.rightStream];
+    if (parsedQuery.additionalStreams && parsedQuery.additionalStreams.length > 0) {
+      allStreams.push(...parsedQuery.additionalStreams);
     }
 
-    // Create streams from adapters
-    const leftStream = leftAdapter.createStream(
-      parsedQuery.leftStream.selector,
-      { timeRange: parsedQuery.leftStream.timeRange }
-    );
+    // Validate all adapters exist
+    const adapters: DataSourceAdapter[] = [];
+    const streamInfo: { name: string; stream: AsyncIterable<LogEvent> }[] = [];
     
-    const rightStream = rightAdapter.createStream(
-      parsedQuery.rightStream.selector,
-      { timeRange: parsedQuery.rightStream.timeRange }
-    );
-
-    // Create joiner
-    const joiner = new StreamJoiner({
-      joinType: parsedQuery.joinType,
-      joinKeys: parsedQuery.joinKeys,
-      timeWindow: parseTimeWindow(parsedQuery.timeWindow || this.options.defaultTimeWindow),
-      lateTolerance: this.options.lateTolerance as number,
-      maxEvents: this.options.maxEvents,
-      temporal: parsedQuery.temporal ? parseTimeWindow(parsedQuery.temporal) : undefined,
-      ignoring: parsedQuery.ignoring,
-      grouping: parsedQuery.grouping,
-      labelMappings: parsedQuery.labelMappings,
-      filter: parsedQuery.filter
-    });
-
-    this.activeJoiners.add(joiner);
-
-    try {
-      // Perform join and yield results
-      for await (const correlation of joiner.join(leftStream, rightStream)) {
-        this.emit('correlationFound', correlation);
-        yield correlation;
+    for (const streamQuery of allStreams) {
+      const adapter = this.getAdapterForSource(streamQuery.source);
+      if (!adapter) {
+        throw new CorrelationError(
+          'Required data source adapter not found',
+          'ADAPTER_NOT_FOUND',
+          { 
+            source: streamQuery.source,
+            availableAdapters: Array.from(this.adapters.keys())
+          }
+        );
       }
-    } finally {
-      this.activeJoiners.delete(joiner);
-      joiner.cleanup();
+      adapters.push(adapter);
+      
+      // Create stream
+      const stream = adapter.createStream(
+        streamQuery.selector,
+        { timeRange: streamQuery.timeRange }
+      );
+      
+      // Wrap the stream to record events as they're processed
+      const instrumentedStream = this.instrumentStream(stream);
+      streamInfo.push({ name: streamQuery.source, stream: instrumentedStream });
+    }
+
+    // If we have more than 2 streams, use MultiStreamJoiner
+    if (allStreams.length > 2) {
+      const multiJoiner = new MultiStreamJoiner({
+        joinType: parsedQuery.joinType,
+        joinKeys: parsedQuery.joinKeys,
+        timeWindow: parseTimeWindow(parsedQuery.timeWindow || this.options.defaultTimeWindow),
+        lateTolerance: this.options.lateTolerance as number,
+        maxEvents: this.options.maxEvents,
+        temporal: parsedQuery.temporal,
+        labelMappings: parsedQuery.labelMappings,
+        filter: parsedQuery.filter
+      });
+
+      this.activeJoiners.add(multiJoiner);
+
+      try {
+        // Perform multi-stream join and yield results
+        for await (const correlation of multiJoiner.joinMultiple(streamInfo)) {
+          this.performanceMonitor.recordCorrelation();
+          this.emit('correlationFound', correlation);
+          yield correlation;
+        }
+      } finally {
+        this.activeJoiners.delete(multiJoiner);
+        multiJoiner.cleanup();
+      }
+    } else {
+      // Use regular StreamJoiner for 2-stream queries
+      const joiner = new StreamJoiner({
+        joinType: parsedQuery.joinType,
+        joinKeys: parsedQuery.joinKeys,
+        timeWindow: parseTimeWindow(parsedQuery.timeWindow || this.options.defaultTimeWindow),
+        lateTolerance: this.options.lateTolerance as number,
+        maxEvents: this.options.maxEvents,
+        temporal: parsedQuery.temporal ? parseTimeWindow(parsedQuery.temporal) : undefined,
+        ignoring: parsedQuery.ignoring,
+        grouping: parsedQuery.grouping,
+        labelMappings: parsedQuery.labelMappings,
+        filter: parsedQuery.filter
+      });
+
+      this.activeJoiners.add(joiner);
+
+      try {
+        // Perform join and yield results
+        for await (const correlation of joiner.join(streamInfo[0].stream, streamInfo[1].stream)) {
+          this.performanceMonitor.recordCorrelation();
+          this.emit('correlationFound', correlation);
+          yield correlation;
+        }
+      } finally {
+        this.activeJoiners.delete(joiner);
+        joiner.cleanup();
+      }
     }
   }
 
   validateQuery(query: string): boolean {
     try {
-      this.parseQuery(query);
-      return true;
+      // Normalize the query by trimming and collapsing whitespace
+      const normalizedQuery = query.trim().replace(/\s+/g, ' ');
+      const result = this.queryParser.validate(normalizedQuery);
+      if (result.valid) return true;
+      
+      return false;
     } catch {
       return false;
     }
   }
 
   private parseQuery(query: string): ParsedQuery {
-    // Simplified query parsing - in production would use proper parser
-    // Example: loki({service="frontend"})[5m] and on(request_id) group_left(session_id) loki({service="backend"})[5m]
-    
-    const joinMatch = query.match(/\b(and|or|unless)\s+on\s*\(([^)]+)\)/i);
-    if (!joinMatch) {
-      throw new CorrelationError('Invalid query syntax', 'QUERY_PARSE_ERROR');
-    }
-
-    const joinType = joinMatch[1].toLowerCase() as 'and' | 'or' | 'unless';
-    const joinKeysRaw = joinMatch[2].split(',').map(k => k.trim());
-    
-    // Parse join keys and check for label mappings
-    const joinKeys: string[] = [];
-    const labelMappings: Array<{ left: string; right: string }> = [];
-    
-    for (const key of joinKeysRaw) {
-      if (key.includes('=')) {
-        // This is a label mapping
-        const [left, right] = key.split('=').map(k => k.trim());
-        labelMappings.push({ left, right });
-        // Also add both keys to joinKeys for compatibility
-        joinKeys.push(left, right);
-      } else {
-        // Regular join key
-        joinKeys.push(key);
+    try {
+      // Trim whitespace and normalize the query before parsing
+      const normalizedQuery = query.trim().replace(/\s+/g, ' ');
+      
+      // Parse the query using the Peggy parser
+      const parsed = this.queryParser.parse(normalizedQuery) as any;
+      
+      // Create a ParsedQuery object with all required properties
+      const result: ParsedQuery = {
+        leftStream: parsed.leftStream,
+        rightStream: parsed.rightStream,
+        joinType: parsed.joinType,
+        joinKeys: parsed.joinKeys,
+        timeWindow: parsed.timeWindow,
+        temporal: parsed.temporal,
+        grouping: parsed.grouping,
+        ignoring: parsed.ignoring,
+        labelMappings: parsed.labelMappings,
+        filter: parsed.filter,
+        additionalStreams: parsed.additionalStreams
+      };
+      
+      // Ensure timeWindow is set if not provided
+      if (!result.timeWindow) {
+        result.timeWindow = this.options.defaultTimeWindow;
       }
+      
+      return this.validateParsedQuery(result, normalizedQuery);
+    } catch (error) {
+      // Handle parse errors
+      const message = error instanceof Error ? error.message : 'Invalid query syntax';
+      throw new CorrelationError(message, 'QUERY_PARSE_ERROR', { query, error });
     }
+  }
 
-    // Check for grouping modifiers (group_left or group_right)
-    let grouping: { side: 'left' | 'right'; labels: string[] } | undefined;
-    const groupLeftMatch = query.match(/group_left\s*\(([^)]*)\)/i);
-    const groupRightMatch = query.match(/group_right\s*\(([^)]*)\)/i);
+  private validateParsedQuery(result: ParsedQuery, originalQuery: string): ParsedQuery {
+    // Validate that we have the required streams
+    if (!result.leftStream || !result.rightStream) {
+      throw new Error('Query must include at least two streams');
+    }
     
-    if (groupLeftMatch) {
-      const labels = groupLeftMatch[1] ? groupLeftMatch[1].split(',').map(l => l.trim()).filter(l => l) : [];
-      grouping = { side: 'left', labels };
-    } else if (groupRightMatch) {
-      const labels = groupRightMatch[1] ? groupRightMatch[1].split(',').map(l => l.trim()).filter(l => l) : [];
-      grouping = { side: 'right', labels };
+    // Validate join type
+    if (!result.joinType) {
+      throw new Error('Query must specify a join type (and, or, unless)');
     }
-
-    // Check for temporal constraint
-    const temporalMatch = query.match(/within\s*\(([^)]+)\)/i);
-    const temporal = temporalMatch ? temporalMatch[1] : undefined;
-
-    // Extract stream queries (simplified)
-    const streamPattern = /(\w+)\s*\(([^)]+)\)\s*\[([^\]]+)\]/g;
-    const streams: StreamQuery[] = [];
-    let match;
-
-    while ((match = streamPattern.exec(query)) !== null) {
-      streams.push({
-        source: match[1],
-        selector: match[2],
-        timeRange: match[3]
-      });
+    
+    // Validate join keys
+    if (!result.joinKeys || result.joinKeys.length === 0) {
+      throw new Error('Query must specify join keys with on() clause');
     }
+    
+    return result;
+  }
 
-    if (streams.length < 2) {
-      throw new CorrelationError(
-        'Query must include at least two streams',
-        'QUERY_PARSE_ERROR'
-      );
+  private async *instrumentStream(stream: AsyncIterable<LogEvent>): AsyncGenerator<LogEvent> {
+    for await (const event of stream) {
+      const startTime = new Date(event.timestamp).getTime();
+      this.performanceMonitor.recordEvent(startTime);
+      yield event;
     }
-
-    return {
-      leftStream: streams[0],
-      rightStream: streams[1],
-      joinType,
-      joinKeys,
-      timeWindow: streams[0].timeRange,
-      temporal,
-      grouping,
-      labelMappings: labelMappings.length > 0 ? labelMappings : undefined
-    };
   }
 
   private getAdapterForSource(source: string): DataSourceAdapter | undefined {
@@ -259,7 +293,7 @@ export class CorrelationEngine extends EventEmitter {
   }
 
   private startGarbageCollection(): void {
-    setInterval(() => {
+    this.gcInterval = setInterval(() => {
       // Clean up inactive joiners (they handle their own cleanup)
 
       // Check memory usage
@@ -273,6 +307,15 @@ export class CorrelationEngine extends EventEmitter {
   }
 
   async destroy(): Promise<void> {
+    // Stop performance monitor
+    this.performanceMonitor.stop();
+    
+    // Clear garbage collection interval
+    if (this.gcInterval) {
+      clearInterval(this.gcInterval);
+      this.gcInterval = undefined;
+    }
+    
     // Clean up all joiners
     for (const joiner of this.activeJoiners) {
       joiner.cleanup();

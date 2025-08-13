@@ -29,7 +29,6 @@ describe('LokiAdapter', () => {
 
     // Mock WebSocket instance
     mockWs = {
-      readyState: WebSocket.CONNECTING,
       on: jest.fn(),
       once: jest.fn(),
       removeListener: jest.fn(),
@@ -42,6 +41,13 @@ describe('LokiAdapter', () => {
       CLOSING: WebSocket.CLOSING,
       CLOSED: WebSocket.CLOSED
     } as any;
+    
+    // Use Object.defineProperty for readyState since it's readonly
+    Object.defineProperty(mockWs, 'readyState', {
+      value: WebSocket.CONNECTING,
+      writable: true,
+      configurable: true
+    });
 
     MockWebSocket.mockImplementation(() => mockWs);
   });
@@ -102,13 +108,18 @@ describe('LokiAdapter', () => {
       // Simulate WebSocket connection opening
       setTimeout(() => {
         const openCallback = mockWs.on.mock.calls.find(call => call[0] === 'open')?.[1];
-        if (openCallback) openCallback();
+        if (openCallback) openCallback.call(mockWs);
         
-        mockWs.readyState = WebSocket.OPEN;
+        Object.defineProperty(mockWs, 'readyState', {
+          value: WebSocket.OPEN,
+          writable: true,
+          configurable: true
+        });
       }, 0);
 
       // Start iteration but don't wait for completion
-      const iteratorPromise = streamIterator.next();
+      const iterator = streamIterator[Symbol.asyncIterator]();
+      const iteratorPromise = iterator.next();
       
       jest.advanceTimersByTime(100);
       
@@ -147,15 +158,20 @@ describe('LokiAdapter', () => {
           messageHandler = handler;
         }
         if (event === 'open') {
-          setTimeout(() => handler(), 0);
+          setTimeout(() => handler.call(mockWs), 0);
         }
         return mockWs;
       });
 
-      mockWs.readyState = WebSocket.OPEN;
+      Object.defineProperty(mockWs, 'readyState', {
+        value: WebSocket.OPEN,
+        writable: true,
+        configurable: true
+      });
 
       // Start iteration
-      const resultPromise = streamIterator.next();
+      const iterator = streamIterator[Symbol.asyncIterator]();
+      const resultPromise = iterator.next();
 
       // Simulate connection opening and message
       jest.advanceTimersByTime(0);
@@ -187,7 +203,7 @@ describe('LokiAdapter', () => {
       // Mock connection failure
       mockWs.once.mockImplementation((event, handler) => {
         if (event === 'error') {
-          setTimeout(() => handler(new Error('Connection failed')), 0);
+          setTimeout(() => handler.call(mockWs, new Error('Connection failed')), 0);
         }
         return mockWs;
       });
@@ -195,10 +211,12 @@ describe('LokiAdapter', () => {
       const streamIterator = adapter.createStream(query);
       
       await expect(async () => {
+        const iterator = streamIterator[Symbol.asyncIterator]();
         const results = [];
-        for await (const event of streamIterator) {
-          results.push(event);
-          if (results.length > 5) break; // Prevent infinite loop
+        let result = await iterator.next();
+        while (!result.done && results.length < 5) {
+          results.push(result.value);
+          result = await iterator.next();
         }
       }).rejects.toThrow();
 
@@ -220,13 +238,17 @@ describe('LokiAdapter', () => {
         if (connectionAttempts <= 2) {
           setTimeout(() => {
             const errorHandler = ws.once.mock.calls.find(call => call[0] === 'error')?.[1];
-            if (errorHandler) errorHandler(new Error('Connection failed'));
+            if (errorHandler) errorHandler.call(ws, new Error('Connection failed'));
           }, 10);
         } else {
           setTimeout(() => {
             const openHandler = ws.once.mock.calls.find(call => call[0] === 'open')?.[1];
-            if (openHandler) openHandler();
-            ws.readyState = WebSocket.OPEN;
+            if (openHandler) openHandler.call(ws);
+            Object.defineProperty(ws, 'readyState', {
+              value: WebSocket.OPEN,
+              writable: true,
+              configurable: true
+            });
           }, 10);
         }
 
@@ -236,7 +258,8 @@ describe('LokiAdapter', () => {
       const streamIterator = adapter.createStream(query);
       
       // Start iteration
-      const iteratorPromise = streamIterator.next();
+      const iterator = streamIterator[Symbol.asyncIterator]();
+      const iteratorPromise = iterator.next();
       
       // Advance time to trigger retries
       jest.advanceTimersByTime(5000);
@@ -257,7 +280,7 @@ describe('LokiAdapter', () => {
         const ws = { ...mockWs };
         setTimeout(() => {
           const errorHandler = ws.once.mock.calls.find(call => call[0] === 'error')?.[1];
-          if (errorHandler) errorHandler(new Error('Connection failed'));
+          if (errorHandler) errorHandler.call(ws, new Error('Connection failed'));
         }, 10);
         return ws as any;
       });
@@ -265,8 +288,10 @@ describe('LokiAdapter', () => {
       const streamIterator = adapter.createStream(query);
       
       await expect(async () => {
-        for await (const event of streamIterator) {
-          // Should not reach here
+        const iterator = streamIterator[Symbol.asyncIterator]();
+        const result = await iterator.next();
+        if (!result.done) {
+          // Should not reach here if connection fails
         }
       }).rejects.toThrow(CorrelationError);
 
@@ -279,8 +304,14 @@ describe('LokiAdapter', () => {
       let pingHandler: () => void;
       mockWs.on.mockImplementation((event, handler) => {
         if (event === 'open') {
-          setTimeout(() => handler(), 0);
-          mockWs.readyState = WebSocket.OPEN;
+          setTimeout(() => {
+            handler.call(mockWs);
+            Object.defineProperty(mockWs, 'readyState', {
+              value: WebSocket.OPEN,
+              writable: true,
+              configurable: true
+            });
+          }, 0);
         }
         if (event === 'ping') {
           pingHandler = handler;
@@ -289,7 +320,8 @@ describe('LokiAdapter', () => {
       });
 
       const streamIterator = adapter.createStream(query);
-      const iteratorPromise = streamIterator.next();
+      const iterator = streamIterator[Symbol.asyncIterator]();
+      const iteratorPromise = iterator.next();
       
       jest.advanceTimersByTime(100);
       
@@ -331,13 +363,14 @@ describe('LokiAdapter', () => {
       mockFetch.mockResolvedValue(mockResponse as any);
 
       const streamIterator = adapter.createStream(query);
+      const iterator = streamIterator[Symbol.asyncIterator]();
       const results = [];
 
       // Get first batch
-      const result1 = await streamIterator.next();
+      const result1 = await iterator.next();
       if (!result1.done) results.push(result1.value);
       
-      const result2 = await streamIterator.next();
+      const result2 = await iterator.next();
       if (!result2.done) results.push(result2.value);
 
       expect(results).toHaveLength(2);
@@ -377,7 +410,8 @@ describe('LokiAdapter', () => {
       const streamIterator = adapter.createStream(query);
       
       // Should not throw error, just continue polling
-      const iteratorPromise = streamIterator.next();
+      const iterator = streamIterator[Symbol.asyncIterator]();
+      const iteratorPromise = iterator.next();
       
       jest.advanceTimersByTime(defaultOptions.pollInterval! * 2);
       
@@ -398,7 +432,8 @@ describe('LokiAdapter', () => {
       const streamIterator = adapter.createStream(query);
       
       // Start iteration - should handle error gracefully
-      const iteratorPromise = streamIterator.next();
+      const iterator = streamIterator[Symbol.asyncIterator]();
+      const iteratorPromise = iterator.next();
       
       jest.advanceTimersByTime(100);
       
@@ -573,7 +608,11 @@ describe('LokiAdapter', () => {
       const streamIterator = adapter.createStream(query);
       
       // Simulate active WebSocket
-      mockWs.readyState = WebSocket.OPEN;
+      Object.defineProperty(mockWs, 'readyState', {
+        value: WebSocket.OPEN,
+        writable: true,
+        configurable: true
+      });
       
       await adapter.destroy();
       
@@ -588,7 +627,8 @@ describe('LokiAdapter', () => {
       const streamIterator = adapter.createStream(query);
       
       // Start iteration
-      const iteratorPromise = streamIterator.next();
+      const iterator = streamIterator[Symbol.asyncIterator]();
+      const iteratorPromise = iterator.next();
       
       await adapter.destroy();
       
@@ -630,15 +670,20 @@ describe('LokiAdapter', () => {
           messageHandler = handler;
         }
         if (event === 'open') {
-          setTimeout(() => handler(), 0);
+          setTimeout(() => handler.call(mockWs), 0);
         }
         return mockWs;
       });
 
-      mockWs.readyState = WebSocket.OPEN;
+      Object.defineProperty(mockWs, 'readyState', {
+        value: WebSocket.OPEN,
+        writable: true,
+        configurable: true
+      });
 
       // Start iteration
-      const resultPromise = streamIterator.next();
+      const iterator = streamIterator[Symbol.asyncIterator]();
+      const resultPromise = iterator.next();
 
       // Send malformed JSON
       setTimeout(() => {
@@ -672,7 +717,8 @@ describe('LokiAdapter', () => {
       const streamIterator = adapter.createStream(query);
       
       // Should handle empty results gracefully
-      const iteratorPromise = streamIterator.next();
+      const iterator = streamIterator[Symbol.asyncIterator]();
+      const iteratorPromise = iterator.next();
       
       jest.advanceTimersByTime(defaultOptions.pollInterval! + 100);
       
@@ -696,7 +742,8 @@ describe('LokiAdapter', () => {
 
       const streamIterator = adapter.createStream(query);
       
-      const iteratorPromise = streamIterator.next();
+      const iterator = streamIterator[Symbol.asyncIterator]();
+      const iteratorPromise = iterator.next();
       
       // Advance past timeout
       jest.advanceTimersByTime(200);

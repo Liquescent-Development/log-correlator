@@ -85,28 +85,30 @@ export class QueryParser {
   private extractJoinOperations(query: string): any[] {
     const joins: any[] = [];
     
-    // Enhanced pattern to match all join variations including label mappings and temporal joins
-    const joinPattern = /\b(and|or|unless)\s+on\s*\(([^)]+)\)(?:\s+ignoring\s*\(([^)]+)\))?(?:\s+within\s*\(([^)]+)\))?(?:\s+(group_left|group_right)\s*(?:\(([^)]*)\))?)?/gi;
+    // Find join operators first
+    const joinOperatorPattern = /\b(and|or|unless)\s+on\s*\(([^)]+)\)/gi;
     let match;
     
-    while ((match = joinPattern.exec(query)) !== null) {
+    while ((match = joinOperatorPattern.exec(query)) !== null) {
       const joinType = match[1].toLowerCase() as JoinType;
       const joinKeysRaw = match[2];
-      const ignoring = match[3];
-      const temporal = match[4];
-      const groupingSide = match[5];
-      const groupingLabels = match[6];
+      const joinStart = match.index;
+      const joinEnd = match.index + match[0].length;
       
       // Parse join keys and label mappings
       const { keys, mappings } = this.parseJoinKeys(joinKeysRaw);
       
-      let grouping = undefined;
-      if (groupingSide) {
-        grouping = {
-          side: groupingSide === 'group_left' ? 'left' as const : 'right' as const,
-          labels: groupingLabels ? groupingLabels.split(',').map(l => l.trim()) : []
-        };
-      }
+      // Find the modifiers after this join (up to the next data source or end)
+      const remainingQuery = query.substring(joinEnd);
+      const nextSourceMatch = remainingQuery.search(/\b\w+\s*\(/);
+      const modifierSection = nextSourceMatch > 0 ? remainingQuery.substring(0, nextSourceMatch) : remainingQuery;
+      
+      // Debug logging removed for production
+      
+      // Extract modifiers from the section
+      const temporal = this.extractModifier(modifierSection, /within\s*\(([^)]+)\)/);
+      const ignoring = this.extractModifier(modifierSection, /ignoring\s*\(([^)]+)\)/);
+      const grouping = this.extractGrouping(modifierSection);
       
       joins.push({
         joinType,
@@ -119,6 +121,21 @@ export class QueryParser {
     }
     
     return joins;
+  }
+
+  private extractModifier(section: string, pattern: RegExp): string | undefined {
+    const match = section.match(pattern);
+    return match ? match[1] : undefined;
+  }
+
+  private extractGrouping(section: string): { side: 'left' | 'right'; labels: string[] } | undefined {
+    const groupingMatch = section.match(/(group_left|group_right)\s*(?:\(([^)]*)\))?/);
+    if (!groupingMatch) return undefined;
+    
+    const side = groupingMatch[1] === 'group_left' ? 'left' as const : 'right' as const;
+    const labels = groupingMatch[2] ? groupingMatch[2].split(',').map(l => l.trim()) : [];
+    
+    return { side, labels };
   }
 
   private parseJoinKeys(joinKeysRaw: string): { keys: string[]; mappings?: LabelMapping[] } {

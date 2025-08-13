@@ -8,7 +8,8 @@
     "generate-parser": "peggy --format commonjs -o src/generated/parser.js grammar/logql.peggy",
     "prebuild": "npm run generate-parser",
     "build": "tsc",
-    "clean": "rm -rf dist src/generated",
+    "clean": "rm -rf dist",
+    "clean:all": "rm -rf dist src/generated",
     "test": "jest"
   },
   "keywords": [

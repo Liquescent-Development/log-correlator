@@ -80,7 +80,7 @@ describe('PromQLAdapter', () => {
       const query = 'up';
       const streamIterator = adapter.createStream(query);
       
-      await (() => { const iterator = streamIterator[Symbol.asyncIterator](); return iterator.next(); })();
+      await streamIterator.next();
       
       expect(mockFetch).toHaveBeenCalledWith(
         expect.any(String),
@@ -117,7 +117,7 @@ describe('PromQLAdapter', () => {
       const query = 'up';
       const streamIterator = adapter.createStream(query);
       
-      await (() => { const iterator = streamIterator[Symbol.asyncIterator](); return iterator.next(); })();
+      await streamIterator.next();
       
       // testuser:testpass in base64 is dGVzdHVzZXI6dGVzdHBhc3M=
       expect(mockFetch).toHaveBeenCalledWith(
@@ -149,7 +149,7 @@ describe('PromQLAdapter', () => {
       const query = 'up';
       const streamIterator = adapter.createStream(query);
       
-      await (() => { const iterator = streamIterator[Symbol.asyncIterator](); return iterator.next(); })();
+      await streamIterator.next();
       
       expect(mockFetch).toHaveBeenCalledWith(
         expect.any(String),
@@ -392,7 +392,7 @@ describe('PromQLAdapter', () => {
       mockFetch.mockResolvedValue(mockResponse as any);
 
       const streamIterator = adapter.createStream(query, options);
-      await (() => { const iterator = streamIterator[Symbol.asyncIterator](); return iterator.next(); })();
+      await streamIterator.next();
 
       // Should use 1 hour time range in request parameters
       expect(mockFetch).toHaveBeenCalledWith(
@@ -419,7 +419,7 @@ describe('PromQLAdapter', () => {
       mockFetch.mockResolvedValue(mockResponse as any);
 
       const streamIterator = adapter.createStream(query, options);
-      await (() => { const iterator = streamIterator[Symbol.asyncIterator](); return iterator.next(); })();
+      await streamIterator.next();
 
       // Should calculate step based on time range (24h = 86400s / 100 = 864s)
       expect(mockFetch).toHaveBeenCalledWith(
@@ -462,13 +462,13 @@ describe('PromQLAdapter', () => {
       const streamIterator = adapter.createStream(query);
       
       // Get first result
-      const result1 = await (() => { const iterator = streamIterator[Symbol.asyncIterator](); return iterator.next(); })();
+      const result1 = await streamIterator.next();
       expect(result1.done).toBe(false);
       
       // Advance time to trigger next poll
       jest.advanceTimersByTime(5000);
       
-      const result2 = await (() => { const iterator = streamIterator[Symbol.asyncIterator](); return iterator.next(); })();
+      const result2 = await streamIterator.next();
       expect(result2.done).toBe(false);
 
       expect(mockFetch).toHaveBeenCalledTimes(2);
@@ -496,7 +496,7 @@ describe('PromQLAdapter', () => {
       const streamIterator = adapter.createStream(query);
       
       // Should not throw error, just continue polling
-      const iteratorPromise = (() => { const iterator = streamIterator[Symbol.asyncIterator](); return iterator.next(); })();
+      const iteratorPromise = streamIterator.next();
       
       jest.advanceTimersByTime(10000);
       
@@ -518,7 +518,7 @@ describe('PromQLAdapter', () => {
       const streamIterator = adapter.createStream(query);
       
       // Start iteration
-      const iteratorPromise = (() => { const iterator = streamIterator[Symbol.asyncIterator](); return iterator.next(); })();
+      const iteratorPromise = streamIterator.next();
       
       await adapter.destroy();
       
@@ -551,7 +551,7 @@ describe('PromQLAdapter', () => {
         mockFetch.mockResolvedValue(mockResponse as any);
 
         const streamIterator = adapter.createStream(query);
-        await (() => { const iterator = streamIterator[Symbol.asyncIterator](); return iterator.next(); })();
+        await streamIterator.next();
 
         expect(mockFetch).toHaveBeenCalledWith(
           expect.stringContaining(`query=${encodeURIComponent(query)}`),
@@ -567,7 +567,7 @@ describe('PromQLAdapter', () => {
       
       await expect(async () => {
         const streamIterator = adapter.createStream(invalidQuery);
-        await (() => { const iterator = streamIterator[Symbol.asyncIterator](); return iterator.next(); })();
+        await streamIterator.next();
       }).rejects.toThrow(CorrelationError);
     });
   });
@@ -599,7 +599,7 @@ describe('PromQLAdapter', () => {
         mockFetch.mockResolvedValue(mockResponse as any);
 
         const streamIterator = adapter.createStream(query, { timeRange });
-        await (() => { const iterator = streamIterator[Symbol.asyncIterator](); return iterator.next(); })();
+        await streamIterator.next();
         
         expect(mockFetch).toHaveBeenCalled();
         
@@ -612,7 +612,7 @@ describe('PromQLAdapter', () => {
       
       await expect(async () => {
         const streamIterator = adapter.createStream(query, { timeRange: 'invalid' });
-        await (() => { const iterator = streamIterator[Symbol.asyncIterator](); return iterator.next(); })();
+        await streamIterator.next();
       }).rejects.toThrow(CorrelationError);
     });
   });
@@ -647,7 +647,7 @@ describe('PromQLAdapter', () => {
       mockFetch.mockResolvedValue(mockResponse as any);
 
       const streamIterator = adapter.createStream(query);
-      const result = await (() => { const iterator = streamIterator[Symbol.asyncIterator](); return iterator.next(); })();
+      const result = await streamIterator.next();
 
       expect(result.value?.message).toBe('custom_metric=42');
     });
@@ -677,7 +677,7 @@ describe('PromQLAdapter', () => {
       mockFetch.mockResolvedValue(mockResponse as any);
 
       const streamIterator = adapter.createStream(query);
-      const result = await (() => { const iterator = streamIterator[Symbol.asyncIterator](); return iterator.next(); })();
+      const result = await streamIterator.next();
 
       expect(result.value?.message).toBe('metric=42');
     });
@@ -705,7 +705,7 @@ describe('PromQLAdapter', () => {
       mockFetch.mockResolvedValue(mockResponse as any);
 
       const streamIterator = adapter.createStream(query);
-      const result = await (() => { const iterator = streamIterator[Symbol.asyncIterator](); return iterator.next(); })();
+      const result = await streamIterator.next();
 
       expect(result.value?.timestamp).toBe('2022-01-01T00:00:00.000Z');
     });
@@ -737,7 +737,7 @@ describe('PromQLAdapter', () => {
       mockFetch.mockResolvedValue(mockResponse as any);
 
       const streamIterator = adapter.createStream(query);
-      const result = await (() => { const iterator = streamIterator[Symbol.asyncIterator](); return iterator.next(); })();
+      const result = await streamIterator.next();
 
       expect(result.value?.joinKeys).toEqual({
         __name__: 'up',
@@ -764,8 +764,8 @@ describe('PromQLAdapter', () => {
 
       const streamIterator = adapter.createStream(query);
       
-      await expect((() => { const iterator = streamIterator[Symbol.asyncIterator](); return iterator.next(); })()).rejects.toThrow(CorrelationError);
-      await expect((() => { const iterator = streamIterator[Symbol.asyncIterator](); return iterator.next(); })()).rejects.toThrow('Prometheus query failed: Bad Request');
+      await expect(streamIterator.next()).rejects.toThrow(CorrelationError);
+      await expect(streamIterator.next()).rejects.toThrow('Prometheus query failed: Bad Request');
     });
 
     it('should handle network errors', async () => {
@@ -775,7 +775,7 @@ describe('PromQLAdapter', () => {
 
       const streamIterator = adapter.createStream(query);
       
-      await expect((() => { const iterator = streamIterator[Symbol.asyncIterator](); return iterator.next(); })()).rejects.toThrow('Network error');
+      await expect(streamIterator.next()).rejects.toThrow('Network error');
     });
 
     it('should handle malformed JSON responses', async () => {
@@ -790,7 +790,7 @@ describe('PromQLAdapter', () => {
 
       const streamIterator = adapter.createStream(query);
       
-      await expect((() => { const iterator = streamIterator[Symbol.asyncIterator](); return iterator.next(); })()).rejects.toThrow('Invalid JSON');
+      await expect(streamIterator.next()).rejects.toThrow('Invalid JSON');
     });
 
     it('should handle empty response data', async () => {
@@ -810,7 +810,7 @@ describe('PromQLAdapter', () => {
       mockFetch.mockResolvedValue(mockResponse as any);
 
       const streamIterator = adapter.createStream(query);
-      const result = await (() => { const iterator = streamIterator[Symbol.asyncIterator](); return iterator.next(); })();
+      const result = await streamIterator.next();
 
       expect(result.done).toBe(true);
     });
@@ -837,7 +837,7 @@ describe('PromQLAdapter', () => {
       mockFetch.mockResolvedValue(mockResponse as any);
 
       const streamIterator = adapter.createStream(query);
-      const result = await (() => { const iterator = streamIterator[Symbol.asyncIterator](); return iterator.next(); })();
+      const result = await streamIterator.next();
 
       expect(result.done).toBe(true);
     });
@@ -975,7 +975,7 @@ describe('PromQLAdapter', () => {
       const streamIterator = adapter.createStream(query);
       
       // Start iteration
-      const iteratorPromise = (() => { const iterator = streamIterator[Symbol.asyncIterator](); return iterator.next(); })();
+      const iteratorPromise = streamIterator.next();
       
       await adapter.destroy();
       
@@ -998,10 +998,7 @@ describe('PromQLAdapter', () => {
 
       // Start multiple streams
       const streamIterators = queries.map(query => adapter.createStream(query));
-      const iteratorPromises = streamIterators.map(iter => {
-        const iterator = iter[Symbol.asyncIterator]();
-        return iterator.next();
-      });
+      const iteratorPromises = streamIterators.map(iter => iter.next());
       
       await adapter.destroy();
       
@@ -1037,7 +1034,7 @@ describe('PromQLAdapter', () => {
       mockFetch.mockResolvedValue(mockResponse as any);
 
       const streamIterator = adapter.createStream(query);
-      const result = await (() => { const iterator = streamIterator[Symbol.asyncIterator](); return iterator.next(); })();
+      const result = await streamIterator.next();
 
       expect(result.value?.message).toBe('large_metric=1234567890123456789.123456789');
       expect(result.value?.labels.__value__).toBe('1234567890123456789.123456789');
@@ -1068,7 +1065,7 @@ describe('PromQLAdapter', () => {
       mockFetch.mockResolvedValue(mockResponse as any);
 
       const streamIterator = adapter.createStream(query);
-      const result = await (() => { const iterator = streamIterator[Symbol.asyncIterator](); return iterator.next(); })();
+      const result = await streamIterator.next();
 
       expect(result.value?.message).toBe('prometheus:http_requests_total=100');
     });
@@ -1095,7 +1092,7 @@ describe('PromQLAdapter', () => {
       mockFetch.mockResolvedValue(mockResponse as any);
 
       const streamIterator = adapter.createStream(query);
-      const result = await (() => { const iterator = streamIterator[Symbol.asyncIterator](); return iterator.next(); })();
+      const result = await streamIterator.next();
 
       expect(result.done).toBe(true);
     });
@@ -1117,7 +1114,7 @@ describe('PromQLAdapter', () => {
       mockFetch.mockResolvedValue(mockResponse as any);
 
       const streamIterator = adapter.createStream(query);
-      const result = await (() => { const iterator = streamIterator[Symbol.asyncIterator](); return iterator.next(); })();
+      const result = await streamIterator.next();
 
       expect(result.value?.message).toBe('metric=prometheus-v2.30.0');
     });

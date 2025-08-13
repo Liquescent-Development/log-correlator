@@ -76,7 +76,7 @@ describe('GraylogAdapter', () => {
       const streamIterator = adapter.createStream(query);
       
       // Start iteration to trigger authentication
-      const iteratorPromise = streamIterator.next();
+      const iteratorPromise = (() => { const iterator = streamIterator[Symbol.asyncIterator](); return iterator.next(); })();
       
       jest.advanceTimersByTime(100);
       
@@ -102,7 +102,7 @@ describe('GraylogAdapter', () => {
       const streamIterator = adapter.createStream(query);
       
       // Start iteration to trigger authentication
-      const iteratorPromise = streamIterator.next();
+      const iteratorPromise = (() => { const iterator = streamIterator[Symbol.asyncIterator](); return iterator.next(); })();
       
       jest.advanceTimersByTime(100);
       
@@ -129,7 +129,7 @@ describe('GraylogAdapter', () => {
       const streamIterator = adapter.createStream(query);
       
       // Start iteration to trigger authentication
-      const iteratorPromise = streamIterator.next();
+      const iteratorPromise = (() => { const iterator = streamIterator[Symbol.asyncIterator](); return iterator.next(); })();
       
       jest.advanceTimersByTime(100);
       
@@ -224,10 +224,10 @@ describe('GraylogAdapter', () => {
       const results = [];
 
       // Get first batch
-      const result1 = await streamIterator.next();
+      const result1 = await (() => { const iterator = streamIterator[Symbol.asyncIterator](); return iterator.next(); })();
       if (!result1.done) results.push(result1.value);
       
-      const result2 = await streamIterator.next();
+      const result2 = await (() => { const iterator = streamIterator[Symbol.asyncIterator](); return iterator.next(); })();
       if (!result2.done) results.push(result2.value);
 
       expect(results).toHaveLength(2);
@@ -289,7 +289,7 @@ describe('GraylogAdapter', () => {
       mockFetch.mockResolvedValue(mockResponse as any);
 
       const streamIterator = adapter.createStream(query, options);
-      const iteratorPromise = streamIterator.next();
+      const iteratorPromise = (() => { const iterator = streamIterator[Symbol.asyncIterator](); return iterator.next(); })();
       
       jest.advanceTimersByTime(100);
 
@@ -323,7 +323,7 @@ describe('GraylogAdapter', () => {
       mockFetch.mockResolvedValue(mockResponse as any);
 
       const streamIterator = adapter.createStream(query);
-      const iteratorPromise = streamIterator.next();
+      const iteratorPromise = (() => { const iterator = streamIterator[Symbol.asyncIterator](); return iterator.next(); })();
       
       jest.advanceTimersByTime(100);
 
@@ -405,14 +405,14 @@ describe('GraylogAdapter', () => {
 
       // Get first batch
       for (let i = 0; i < 2; i++) {
-        const result = await streamIterator.next();
+        const result = await (() => { const iterator = streamIterator[Symbol.asyncIterator](); return iterator.next(); })();
         if (!result.done) results.push(result.value);
       }
 
       // Wait for next poll and get next batch
       jest.advanceTimersByTime(defaultOptions.pollInterval!);
       
-      const result3 = await streamIterator.next();
+      const result3 = await (() => { const iterator = streamIterator[Symbol.asyncIterator](); return iterator.next(); })();
       if (!result3.done) results.push(result3.value);
 
       // Should only get 3 unique messages, not 4
@@ -443,7 +443,7 @@ describe('GraylogAdapter', () => {
       const streamIterator = adapter.createStream(query);
       
       // Should not throw error, just continue polling
-      const iteratorPromise = streamIterator.next();
+      const iteratorPromise = (() => { const iterator = streamIterator[Symbol.asyncIterator](); return iterator.next(); })();
       
       jest.advanceTimersByTime(defaultOptions.pollInterval! * 3);
       
@@ -465,7 +465,7 @@ describe('GraylogAdapter', () => {
       const streamIterator = adapter.createStream(query);
       
       await expect(async () => {
-        const result = await streamIterator.next();
+        const result = await (() => { const iterator = streamIterator[Symbol.asyncIterator](); return iterator.next(); })();
       }).rejects.toThrow(CorrelationError);
 
       await adapter.destroy();
@@ -478,7 +478,7 @@ describe('GraylogAdapter', () => {
 
       const streamIterator = adapter.createStream(query);
       
-      const iteratorPromise = streamIterator.next();
+      const iteratorPromise = (() => { const iterator = streamIterator[Symbol.asyncIterator](); return iterator.next(); })();
       
       jest.advanceTimersByTime(defaultOptions.pollInterval!);
       
@@ -515,7 +515,7 @@ describe('GraylogAdapter', () => {
 
         mockFetch.mockResolvedValue(mockResponse as any);
         
-        const iteratorPromise = streamIterator.next();
+        const iteratorPromise = (() => { const iterator = streamIterator[Symbol.asyncIterator](); return iterator.next(); })();
         
         jest.advanceTimersByTime(100);
         
@@ -566,7 +566,7 @@ describe('GraylogAdapter', () => {
       mockFetch.mockResolvedValue(mockResponse as any);
 
       const streamIterator = adapter.createStream(query);
-      const result = await streamIterator.next();
+      const result = await (() => { const iterator = streamIterator[Symbol.asyncIterator](); return iterator.next(); })();
 
       expect(result.value?.joinKeys).toMatchObject({
         request_id: 'req123',
@@ -601,7 +601,7 @@ describe('GraylogAdapter', () => {
       mockFetch.mockResolvedValue(mockResponse as any);
 
       const streamIterator = adapter.createStream(query);
-      const result = await streamIterator.next();
+      const result = await (() => { const iterator = streamIterator[Symbol.asyncIterator](); return iterator.next(); })();
 
       expect(result.value?.joinKeys).toMatchObject({
         request_id: 'abc123',
@@ -639,7 +639,7 @@ describe('GraylogAdapter', () => {
       mockFetch.mockResolvedValue(mockResponse as any);
 
       const streamIterator = adapter.createStream(query);
-      const result = await streamIterator.next();
+      const result = await (() => { const iterator = streamIterator[Symbol.asyncIterator](); return iterator.next(); })();
 
       expect(result.value?.labels).toMatchObject({
         request_id: '123',
@@ -681,7 +681,7 @@ describe('GraylogAdapter', () => {
         mockFetch.mockResolvedValue(mockResponse as any);
 
         const streamIterator = adapter.createStream(query, { timeRange });
-        const iteratorPromise = streamIterator.next();
+        const iteratorPromise = (() => { const iterator = streamIterator[Symbol.asyncIterator](); return iterator.next(); })();
         
         jest.advanceTimersByTime(100);
         
@@ -707,7 +707,7 @@ describe('GraylogAdapter', () => {
       mockFetch.mockResolvedValue(mockResponse as any);
 
       const streamIterator = adapter.createStream(query, { timeRange: 'invalid' });
-      const iteratorPromise = streamIterator.next();
+      const iteratorPromise = (() => { const iterator = streamIterator[Symbol.asyncIterator](); return iterator.next(); })();
       
       jest.advanceTimersByTime(100);
       
@@ -810,7 +810,7 @@ describe('GraylogAdapter', () => {
       const streamIterator = adapter.createStream(query);
       
       // Start iteration
-      const iteratorPromise = streamIterator.next();
+      const iteratorPromise = (() => { const iterator = streamIterator[Symbol.asyncIterator](); return iterator.next(); })();
       
       await adapter.destroy();
       
@@ -834,7 +834,10 @@ describe('GraylogAdapter', () => {
 
       // Start multiple streams
       const streamIterators = queries.map(query => adapter.createStream(query));
-      const iteratorPromises = streamIterators.map(iter => iter.next());
+      const iteratorPromises = streamIterators.map(iter => {
+        const iterator = iter[Symbol.asyncIterator]();
+        return iterator.next();
+      });
       
       await adapter.destroy();
       
@@ -864,7 +867,7 @@ describe('GraylogAdapter', () => {
       const streamIterator = adapter.createStream(query);
       
       // Should handle empty response gracefully
-      const iteratorPromise = streamIterator.next();
+      const iteratorPromise = (() => { const iterator = streamIterator[Symbol.asyncIterator](); return iterator.next(); })();
       
       jest.advanceTimersByTime(defaultOptions.pollInterval! + 100);
       
@@ -894,7 +897,7 @@ describe('GraylogAdapter', () => {
       mockFetch.mockResolvedValue(mockResponse as any);
 
       const streamIterator = adapter.createStream(query);
-      const result = await streamIterator.next();
+      const result = await (() => { const iterator = streamIterator[Symbol.asyncIterator](); return iterator.next(); })();
 
       // Should handle malformed message gracefully
       expect(result.value).toBeDefined();
@@ -916,7 +919,7 @@ describe('GraylogAdapter', () => {
       const streamIterator = adapter.createStream(query);
       
       // Should handle JSON parsing errors gracefully
-      const iteratorPromise = streamIterator.next();
+      const iteratorPromise = (() => { const iterator = streamIterator[Symbol.asyncIterator](); return iterator.next(); })();
       
       jest.advanceTimersByTime(100);
       
@@ -938,7 +941,7 @@ describe('GraylogAdapter', () => {
 
       const streamIterator = adapter.createStream(query);
       
-      const iteratorPromise = streamIterator.next();
+      const iteratorPromise = (() => { const iterator = streamIterator[Symbol.asyncIterator](); return iterator.next(); })();
       
       // Advance past timeout
       jest.advanceTimersByTime(200);
@@ -972,7 +975,7 @@ describe('GraylogAdapter', () => {
       mockFetch.mockResolvedValue(mockResponse as any);
 
       const streamIterator = adapter.createStream(query);
-      const result = await streamIterator.next();
+      const result = await (() => { const iterator = streamIterator[Symbol.asyncIterator](); return iterator.next(); })();
 
       expect(result.value?.stream).toBe('unknown');
 

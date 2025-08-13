@@ -18,15 +18,26 @@ export class TimeWindow {
     this.windowStart = now;
     this.windowEnd = now + options.windowSize;
     
-    // Initialize LRU cache with max size based on estimated keys
-    // Assuming average of 10 events per key, max keys = maxEvents / 10
-    const maxKeys = Math.max(100, Math.floor(options.maxEvents / 10));
+    // Initialize LRU cache with memory-based sizing
+    // Use maxSize to limit by memory consumption instead of key count
+    // Estimate ~1KB per event (conservative estimate for typical log event)
+    const estimatedBytesPerEvent = 1024;
+    const maxSizeBytes = options.maxEvents * estimatedBytesPerEvent;
+    
     this.events = new LRUCache<string, LogEvent[]>({
-      max: maxKeys,
-      // Optional: set TTL to window size + late tolerance
+      // No fixed max key limit - let it grow as needed
+      maxSize: maxSizeBytes,
+      // Calculate size of each cache entry
+      sizeCalculation: (value: LogEvent[]) => {
+        // Rough estimate: 1KB per event, minimum 1 byte for empty arrays
+        return Math.max(1, value.length * estimatedBytesPerEvent);
+      },
+      // TTL to expire old windows
       ttl: options.windowSize + options.lateTolerance,
-      // Update age on get to keep active keys
-      updateAgeOnGet: true
+      // Keep frequently accessed keys active
+      updateAgeOnGet: true,
+      // Allow stale entries to be returned while revalidating
+      allowStale: false
     });
   }
 
@@ -47,12 +58,16 @@ export class TimeWindow {
       return false;
     }
 
-    // Add event to window
-    if (!this.events.has(key)) {
-      this.events.set(key, []);
+    // Get or create event array for this key
+    let keyEvents = this.events.get(key);
+    if (!keyEvents) {
+      keyEvents = [];
+      // The LRU cache will automatically evict least recently used keys
+      // if we exceed maxSize, ensuring memory bounds are respected
+      this.events.set(key, keyEvents);
     }
     
-    this.events.get(key)!.push(event);
+    keyEvents.push(event);
     this.eventCount++;
     
     return true;

@@ -29,7 +29,15 @@ interface JoinInfo {
 
 // Generated file - typed import
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const generatedParser: GeneratedParser = require('./generated/parser.js');
+let generatedParser: GeneratedParser;
+try {
+  // Try loading from dist (for built package)
+  generatedParser = require('./generated/parser.js');
+} catch {
+  // Try loading from src (for tests)
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  generatedParser = require('../src/generated/parser.js');
+}
 
 // interface ParseError {
 //   line: number;

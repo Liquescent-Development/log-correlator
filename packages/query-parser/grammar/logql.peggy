@@ -70,6 +70,12 @@ PromQLSelector
         parsed: { type: 'promql', metric, matchers: matchers || [] }
       };
     }
+  / metric:Identifier {
+      return {
+        text: metric,
+        parsed: { type: 'promql', metric, matchers: [] }
+      };
+    }
 
 LabelMatcherList
   = first:LabelMatcher rest:(_ "," _ LabelMatcher)* {
@@ -211,7 +217,7 @@ SingleStringChar
   / "\\" char:. { return char; }
 
 Identifier
-  = [a-zA-Z_][a-zA-Z0-9_]* { return text(); }
+  = [a-zA-Z_][a-zA-Z0-9_:]* { return text(); }
 
 Number
   = [0-9]+ { return text(); }
