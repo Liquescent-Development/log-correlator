@@ -217,6 +217,7 @@ export class StreamJoiner {
     let index = 0;
     
     // Poll for new correlations
+    // eslint-disable-next-line no-constant-condition
     while (true) {
       if (index < pendingCorrelations.length) {
         const correlation = pendingCorrelations[index];

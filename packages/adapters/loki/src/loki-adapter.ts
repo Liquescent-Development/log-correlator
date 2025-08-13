@@ -58,7 +58,7 @@ export class LokiAdapter implements DataSourceAdapter {
   private async *createWebSocketStream(query: string, timeRange: string): AsyncIterable<LogEvent> {
     const maxReconnectDelay = 30000; // 30 seconds max
     const baseReconnectDelay = 1000; // Start with 1 second
-    let shouldReconnect = true;
+    const shouldReconnect = true;
     
     while (shouldReconnect && this.reconnectAttempts < this.options.maxRetries!) {
       try {

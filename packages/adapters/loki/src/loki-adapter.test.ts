@@ -119,7 +119,7 @@ describe('LokiAdapter', () => {
 
       // Start iteration but don't wait for completion
       const iterator = streamIterator[Symbol.asyncIterator]();
-      const iteratorPromise = iterator.next();
+      void iterator.next(); // Start the async iteration
       
       jest.advanceTimersByTime(100);
       
@@ -259,7 +259,7 @@ describe('LokiAdapter', () => {
       
       // Start iteration
       const iterator = streamIterator[Symbol.asyncIterator]();
-      const iteratorPromise = iterator.next();
+      void iterator.next(); // Start the async iteration
       
       // Advance time to trigger retries
       jest.advanceTimersByTime(5000);
@@ -321,7 +321,7 @@ describe('LokiAdapter', () => {
 
       const streamIterator = adapter.createStream(query);
       const iterator = streamIterator[Symbol.asyncIterator]();
-      const iteratorPromise = iterator.next();
+      void iterator.next(); // Start the async iteration
       
       jest.advanceTimersByTime(100);
       
@@ -411,7 +411,7 @@ describe('LokiAdapter', () => {
       
       // Should not throw error, just continue polling
       const iterator = streamIterator[Symbol.asyncIterator]();
-      const iteratorPromise = iterator.next();
+      void iterator.next(); // Start the async iteration
       
       jest.advanceTimersByTime(defaultOptions.pollInterval! * 2);
       
@@ -433,7 +433,7 @@ describe('LokiAdapter', () => {
       
       // Start iteration - should handle error gracefully
       const iterator = streamIterator[Symbol.asyncIterator]();
-      const iteratorPromise = iterator.next();
+      void iterator.next(); // Start the async iteration
       
       jest.advanceTimersByTime(100);
       
@@ -455,7 +455,7 @@ describe('LokiAdapter', () => {
       
       // Create a query to trigger header building
       const query = '{service="frontend"}';
-      const streamIterator = adapter.createStream(query);
+      void adapter.createStream(query); // Trigger stream creation
       
       if (options.websocket) {
         expect(MockWebSocket).toHaveBeenCalledWith(
@@ -478,7 +478,7 @@ describe('LokiAdapter', () => {
       adapter = new LokiAdapter(options);
       
       const query = '{service="frontend"}';
-      const streamIterator = adapter.createStream(query);
+      void adapter.createStream(query); // Trigger stream creation
       
       if (options.websocket) {
         expect(MockWebSocket).toHaveBeenCalledWith(
@@ -503,7 +503,7 @@ describe('LokiAdapter', () => {
       adapter = new LokiAdapter(options);
       
       const query = '{service="frontend"}';
-      const streamIterator = adapter.createStream(query);
+      void adapter.createStream(query); // Trigger stream creation
       
       if (options.websocket) {
         expect(MockWebSocket).toHaveBeenCalledWith(
@@ -605,7 +605,7 @@ describe('LokiAdapter', () => {
     it('should clean up WebSocket connections', async () => {
       // Start a WebSocket stream
       const query = '{service="frontend"}';
-      const streamIterator = adapter.createStream(query);
+      void adapter.createStream(query); // Trigger stream creation
       
       // Simulate active WebSocket
       Object.defineProperty(mockWs, 'readyState', {
@@ -628,7 +628,7 @@ describe('LokiAdapter', () => {
       
       // Start iteration
       const iterator = streamIterator[Symbol.asyncIterator]();
-      const iteratorPromise = iterator.next();
+      void iterator.next(); // Start the async iteration
       
       await adapter.destroy();
       
@@ -643,7 +643,7 @@ describe('LokiAdapter', () => {
       
       // Start a WebSocket stream to create intervals
       const query = '{service="frontend"}';
-      const streamIterator = adapter.createStream(query);
+      void adapter.createStream(query); // Trigger stream creation
       
       await adapter.destroy();
       
@@ -718,7 +718,7 @@ describe('LokiAdapter', () => {
       
       // Should handle empty results gracefully
       const iterator = streamIterator[Symbol.asyncIterator]();
-      const iteratorPromise = iterator.next();
+      void iterator.next(); // Start the async iteration
       
       jest.advanceTimersByTime(defaultOptions.pollInterval! + 100);
       
@@ -743,7 +743,7 @@ describe('LokiAdapter', () => {
       const streamIterator = adapter.createStream(query);
       
       const iterator = streamIterator[Symbol.asyncIterator]();
-      const iteratorPromise = iterator.next();
+      void iterator.next(); // Start the async iteration
       
       // Advance past timeout
       jest.advanceTimersByTime(200);

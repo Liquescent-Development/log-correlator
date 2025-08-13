@@ -2133,7 +2133,7 @@ describe('StreamJoiner', () => {
         const leftStream = createDelayedAsyncIterable(leftEvents);
         const rightStream = createDelayedAsyncIterable(rightEvents);
 
-        const results = await collectCorrelationsWithTiming(joiner, leftStream, rightStream);
+        const results = await collectCorrelationsWithTiming(joiner, leftStream, rightStream, false); // Use batch mode for final state
 
         expect(results).toHaveLength(2);
         
@@ -2172,7 +2172,7 @@ describe('StreamJoiner', () => {
         const leftStream = createDelayedAsyncIterable(leftEvents);
         const rightStream = createDelayedAsyncIterable(rightEvents);
 
-        const results = await collectCorrelationsWithTiming(joiner, leftStream, rightStream);
+        const results = await collectCorrelationsWithTiming(joiner, leftStream, rightStream, false); // Use batch mode
 
         // Should emit complete correlation (current batch behavior includes late arrivals)
         expect(results).toHaveLength(1);
@@ -2471,7 +2471,7 @@ describe('StreamJoiner', () => {
         const leftStream = createDelayedAsyncIterable(leftEvents);
         const rightStream = createDelayedAsyncIterable(rightEvents);
 
-        const results = await collectCorrelationsWithTiming(joiner, leftStream, rightStream);
+        const results = await collectCorrelationsWithTiming(joiner, leftStream, rightStream, false); // Use batch mode
 
         expect(results).toHaveLength(1); // One correlation for req1
         expect(results[0].correlation.events).toHaveLength(5); // All events included

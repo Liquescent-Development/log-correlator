@@ -5,8 +5,7 @@ import {
   LogEvent,
   CorrelatedEvent,
   CorrelationError,
-  ParsedQuery,
-  StreamQuery
+  ParsedQuery
 } from './types';
 import { StreamJoiner } from './stream-joiner';
 import { MultiStreamJoiner } from './multi-stream-joiner';
@@ -249,7 +248,7 @@ export class CorrelationEngine extends EventEmitter {
     }
   }
 
-  private validateParsedQuery(result: ParsedQuery, originalQuery: string): ParsedQuery {
+  private validateParsedQuery(result: ParsedQuery, _originalQuery: string): ParsedQuery {
     // Validate that we have the required streams
     if (!result.leftStream || !result.rightStream) {
       throw new Error('Query must include at least two streams');
