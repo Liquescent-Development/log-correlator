@@ -1,8 +1,33 @@
-import { ParsedQuery, StreamQuery, JoinType } from '@liquescent/log-correlator-core';
+// Local type definitions to avoid circular dependency
+export type JoinType = 'and' | 'or' | 'unless';
+
+export interface StreamQuery {
+  source: string;
+  selector: string;
+  timeRange: string;
+  alias?: string;
+}
 
 interface LabelMapping {
   left: string;
   right: string;
+}
+
+export interface ParsedQuery {
+  leftStream: StreamQuery;
+  rightStream: StreamQuery;
+  joinType: JoinType;
+  joinKeys: string[];
+  timeWindow?: string;
+  temporal?: string;
+  grouping?: {
+    side: 'left' | 'right';
+    labels: string[];
+  };
+  ignoring?: string[];
+  labelMappings?: Array<{ left: string; right: string }>;
+  filter?: string;
+  additionalStreams?: StreamQuery[];
 }
 
 interface ParsedQueryExtended extends ParsedQuery {

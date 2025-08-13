@@ -4,15 +4,14 @@ import {
   DataSourceAdapter,
   LogEvent,
   CorrelatedEvent,
-  CorrelationError,
-  ParsedQuery
+  CorrelationError
 } from './types';
 import { StreamJoiner } from './stream-joiner';
 import { MultiStreamJoiner } from './multi-stream-joiner';
 import { BackpressureController } from './backpressure-controller';
 import { PerformanceMonitor } from './performance-monitor';
 import { parseTimeWindow } from './utils';
-import { PeggyQueryParser } from '@liquescent/log-correlator-query-parser';
+import { PeggyQueryParser, ParsedQuery } from '@liquescent/log-correlator-query-parser';
 
 /**
  * Main correlation engine for real-time log stream processing

@@ -68,28 +68,3 @@ export class CorrelationError extends Error {
   }
 }
 
-export type JoinType = 'and' | 'or' | 'unless';
-
-export interface ParsedQuery {
-  leftStream: StreamQuery;
-  rightStream: StreamQuery;
-  joinType: JoinType;
-  joinKeys: string[];
-  timeWindow?: string;
-  temporal?: string;
-  grouping?: {
-    side: 'left' | 'right';
-    labels: string[];
-  };
-  ignoring?: string[];
-  labelMappings?: Array<{ left: string; right: string }>;
-  filter?: string;
-  additionalStreams?: StreamQuery[];
-}
-
-export interface StreamQuery {
-  source: string;
-  selector: string;
-  timeRange: string;
-  alias?: string;
-}

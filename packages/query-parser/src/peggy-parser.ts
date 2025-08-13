@@ -1,4 +1,5 @@
-import { ParsedQuery, StreamQuery, JoinType } from '@liquescent/log-correlator-core';
+// Import from local parser types to avoid circular dependency
+import { ParsedQuery, StreamQuery, JoinType } from './parser';
 
 // Type definition for the generated parser
 interface GeneratedParser {

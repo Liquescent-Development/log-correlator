@@ -212,24 +212,19 @@ export class LokiAdapter implements DataSourceAdapter {
           yield messageQueue.shift()!;
         } else {
           // Wait for next message
-          try {
-            yield await new Promise<LogEvent>((resolve, reject) => {
-              resolveNext = (result) => {
-                if (!result.done) {
-                  resolve(result.value);
-                }
-              };
-              rejectNext = reject;
-              
-              // Check if connection is still alive
-              if (connectionClosed || ws.readyState !== WebSocket.OPEN) {
-                reject(new Error('WebSocket connection lost'));
+          yield await new Promise<LogEvent>((resolve, reject) => {
+            resolveNext = (result) => {
+              if (!result.done) {
+                resolve(result.value);
               }
-            });
-          } catch (error) {
-            // Connection lost, will trigger reconnect
-            throw error;
-          }
+            };
+            rejectNext = reject;
+            
+            // Check if connection is still alive
+            if (connectionClosed || ws.readyState !== WebSocket.OPEN) {
+              reject(new Error('WebSocket connection lost'));
+            }
+          });
         }
       }
     } finally {

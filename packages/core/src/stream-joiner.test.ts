@@ -1,5 +1,6 @@
 import { StreamJoiner, StreamJoinerOptions } from './stream-joiner';
-import { LogEvent, JoinType, CorrelatedEvent } from './types';
+import { LogEvent, CorrelatedEvent } from './types';
+import { JoinType } from '@liquescent/log-correlator-query-parser';
 
 describe('StreamJoiner', () => {
   const createTestEvent = (

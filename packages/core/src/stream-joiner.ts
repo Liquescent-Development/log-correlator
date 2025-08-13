@@ -1,4 +1,5 @@
-import { LogEvent, CorrelatedEvent, JoinType } from './types';
+import { LogEvent, CorrelatedEvent } from './types';
+import { JoinType } from '@liquescent/log-correlator-query-parser';
 import { TimeWindow } from './time-window';
 
 export interface StreamJoinerOptions {
@@ -200,7 +201,7 @@ export class StreamJoiner {
     for (const [key, firstArrival] of eventArrivalTimes) {
       if (arrivalTime - firstArrival > this.options.lateTolerance) {
         // Check if this event would correlate with the early event
-        const [side, joinKey] = key.split(':');
+        const [_side, joinKey] = key.split(':');
         const eventJoinKey = this.extractJoinKey(event);
         if (eventJoinKey === joinKey) {
           return true; // Event is too late

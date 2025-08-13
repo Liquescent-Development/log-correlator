@@ -1,4 +1,5 @@
-import { LogEvent, CorrelatedEvent, JoinType } from './types';
+import { LogEvent, CorrelatedEvent } from './types';
+import { JoinType } from '@liquescent/log-correlator-query-parser';
 import { parseTimeWindow } from './utils';
 
 export interface MultiStreamJoinerOptions {
