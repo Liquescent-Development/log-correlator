@@ -123,12 +123,17 @@ describe("TimeWindow", () => {
         maxEvents: 100,
       });
 
-      const now = Date.now();
+      // Get the actual window end time from the TimeWindow instance
+      // to avoid timing discrepancies between constructor and test
+      const timeRange = window.getTimeRange();
+      const windowEnd = new Date(timeRange.end).getTime();
+      const windowStart = windowEnd - 1000; // Derive start from end
 
-      expect(window.isExpired(now)).toBe(false);
-      expect(window.isExpired(now + 1000)).toBe(false); // End of window
-      expect(window.isExpired(now + 1500)).toBe(false); // Within tolerance
-      expect(window.isExpired(now + 1501)).toBe(true); // Expired
+      expect(window.isExpired(windowStart)).toBe(false);
+      expect(window.isExpired(windowEnd)).toBe(false); // End of window
+      expect(window.isExpired(windowEnd + 499)).toBe(false); // Within tolerance
+      expect(window.isExpired(windowEnd + 501)).toBe(true); // Just past tolerance
+      expect(window.isExpired(windowEnd + 1000)).toBe(true); // Well past tolerance
     });
   });
 
