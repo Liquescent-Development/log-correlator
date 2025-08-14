@@ -163,7 +163,7 @@ describe("LokiAdapter", () => {
       // Setup WebSocket event handlers
       let openHandler: (() => void) | undefined;
       let messageHandler: ((data: any) => void) | undefined;
-      
+
       mockWs.on.mockImplementation((event, handler) => {
         if (event === "message") {
           messageHandler = handler;
@@ -260,7 +260,10 @@ describe("LokiAdapter", () => {
             // Fail first two attempts, succeed on third
             if (connectionAttempts <= 2) {
               if (event === "error") {
-                setTimeout(() => handler.call(ws, new Error("Connection failed")), 10);
+                setTimeout(
+                  () => handler.call(ws, new Error("Connection failed")),
+                  10,
+                );
               }
             } else {
               if (event === "open") {
@@ -304,31 +307,33 @@ describe("LokiAdapter", () => {
 
       // Mock all connections to fail
       MockWebSocket.mockImplementation(() => {
-        const ws = { 
+        const ws = {
           ...mockWs,
           once: jest.fn().mockImplementation((event, handler) => {
             if (event === "error") {
-              setImmediate(() => handler.call(ws, new Error("Connection failed")));
+              setImmediate(() =>
+                handler.call(ws, new Error("Connection failed")),
+              );
             }
             // Don't call open handler
             return ws;
-          })
+          }),
         };
         return ws as any;
       });
 
       const streamIterator = adapter.createStream(query);
       const iterator = streamIterator[Symbol.asyncIterator]();
-      
+
       // Start the iteration and wait for retries to be exhausted
       const nextPromise = iterator.next();
-      
+
       // Advance timers to allow retries
       for (let i = 0; i < 3; i++) {
-        await new Promise(resolve => setImmediate(resolve));
+        await new Promise((resolve) => setImmediate(resolve));
         jest.advanceTimersByTime(5000);
       }
-      
+
       // The iterator should eventually throw when max retries are exceeded
       await expect(nextPromise).rejects.toThrow(CorrelationError);
 
@@ -340,7 +345,7 @@ describe("LokiAdapter", () => {
 
       let pingHandler: () => void;
       let openHandler: () => void;
-      
+
       mockWs.on.mockImplementation((event, handler) => {
         if (event === "ping") {
           pingHandler = handler;
@@ -508,7 +513,7 @@ describe("LokiAdapter", () => {
       adapter.createStream(query);
 
       // Give time for stream to start
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       if (options.websocket) {
         expect(MockWebSocket).toHaveBeenCalledWith(
@@ -536,7 +541,7 @@ describe("LokiAdapter", () => {
       adapter.createStream(query);
 
       // Give time for stream to start
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       if (options.websocket) {
         expect(MockWebSocket).toHaveBeenCalledWith(
@@ -566,7 +571,7 @@ describe("LokiAdapter", () => {
       adapter.createStream(query);
 
       // Give time for stream to start
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       if (options.websocket) {
         expect(MockWebSocket).toHaveBeenCalledWith(
@@ -724,7 +729,7 @@ describe("LokiAdapter", () => {
 
       let messageHandler: ((data: any) => void) | undefined;
       let openHandler: (() => void) | undefined;
-      
+
       mockWs.on.mockImplementation((event, handler) => {
         if (event === "message") {
           messageHandler = handler;
@@ -814,15 +819,15 @@ describe("LokiAdapter", () => {
 
       const streamIterator = adapter.createStream(query);
       const iterator = streamIterator[Symbol.asyncIterator]();
-      
+
       // Start the async iteration
       const nextPromise = iterator.next();
 
       // Advance past timeout
       jest.advanceTimersByTime(200);
-      
+
       // Let async operations complete
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       // Should handle timeout gracefully without throwing
       // The adapter should retry or handle the timeout internally
