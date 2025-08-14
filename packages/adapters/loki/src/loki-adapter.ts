@@ -428,7 +428,7 @@ export class LokiAdapter implements DataSourceAdapter {
       // Check for basic LogQL structure without regex to avoid ReDoS
       const openBrace = query.indexOf("{");
       const closeBrace = query.indexOf("}");
-      
+
       if (openBrace === -1 || closeBrace === -1 || openBrace >= closeBrace) {
         return false;
       }

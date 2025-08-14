@@ -245,18 +245,95 @@ export class GraylogAdapter implements DataSourceAdapter {
     // Example: service:backend -> service:backend
     // Example: service="backend" -> service:backend
 
-    let graylogQuery = query;
+    // Parse without regex to avoid ReDoS vulnerabilities
+    let result = "";
+    let i = 0;
 
-    // Replace PromQL-style label matchers with Graylog syntax
-    // Use atomic groups to prevent catastrophic backtracking
-    graylogQuery = graylogQuery.replace(/(\w+)="([^"]*?)"/g, "$1:$2");
-    graylogQuery = graylogQuery.replace(/(\w+)='([^']*?)'/g, "$1:$2");
+    while (i < query.length) {
+      // Look for field="value" or field='value' patterns
+      let fieldStart = i;
+      // Check for word characters without regex
+      while (
+        i < query.length &&
+        ((query[i] >= "a" && query[i] <= "z") ||
+          (query[i] >= "A" && query[i] <= "Z") ||
+          (query[i] >= "0" && query[i] <= "9") ||
+          query[i] === "_")
+      ) {
+        i++;
+      }
+
+      if (i > fieldStart && i < query.length && query[i] === "=") {
+        const field = query.substring(fieldStart, i);
+        i++; // skip '='
+
+        if (i < query.length && (query[i] === '"' || query[i] === "'")) {
+          const quote = query[i];
+          i++; // skip opening quote
+          const valueStart = i;
+
+          // Find closing quote
+          while (i < query.length && query[i] !== quote) {
+            i++;
+          }
+
+          if (i < query.length) {
+            const value = query.substring(valueStart, i);
+            result += field + ":" + value;
+            i++; // skip closing quote
+          } else {
+            // No closing quote, treat as literal
+            result += query.substring(fieldStart);
+            break;
+          }
+        } else {
+          // No quotes after =, revert to original
+          result += query.substring(fieldStart, i);
+        }
+      } else {
+        // Not a field=value pattern, copy as-is
+        if (fieldStart < i) {
+          result += query.substring(fieldStart, i);
+        }
+        if (i < query.length) {
+          result += query[i];
+          i++;
+        }
+      }
+    }
 
     // Handle AND/OR operators
-    graylogQuery = graylogQuery.replace(/\s+AND\s+/gi, " AND ");
-    graylogQuery = graylogQuery.replace(/\s+OR\s+/gi, " OR ");
+    const words: string[] = [];
+    let currentWord = "";
 
-    return graylogQuery;
+    for (let j = 0; j < result.length; j++) {
+      if (
+        result[j] === " " ||
+        result[j] === "\t" ||
+        result[j] === "\n" ||
+        result[j] === "\r"
+      ) {
+        if (currentWord) {
+          const upperWord = currentWord.toUpperCase();
+          words.push(
+            upperWord === "AND" || upperWord === "OR" ? upperWord : currentWord,
+          );
+          currentWord = "";
+        }
+      } else {
+        currentWord += result[j];
+      }
+    }
+    if (currentWord) {
+      const upperWord = currentWord.toUpperCase();
+      words.push(
+        upperWord === "AND" || upperWord === "OR" ? upperWord : currentWord,
+      );
+    }
+
+    result = words.join(" ");
+
+    return result;
   }
 
   private parseTimeRange(timeRange: string): number {
