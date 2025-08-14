@@ -18,7 +18,8 @@
     "packages/*/lib/",
     "packages/examples/**/*.js",
     "packages/query-parser/src/generated/",
-    "test-parser*.js"
+    "test-parser*.js",
+    "jest.setup.js"
   ],
   "rules": {
     "@typescript-eslint/no-explicit-any": "warn",
