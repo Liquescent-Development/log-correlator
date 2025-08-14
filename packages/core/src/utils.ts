@@ -1,5 +1,6 @@
 export function parseTimeWindow(window: string): number {
-  const match = window.match(/^(\d+)([smhd])$/);
+  // Support both single unit (s,m,h,d) and double unit (ms) formats
+  const match = window.match(/^(\d+)(ms|[smhd])$/);
   if (!match) {
     throw new Error(`Invalid time window format: ${window}`);
   }
@@ -8,6 +9,8 @@ export function parseTimeWindow(window: string): number {
   const unit = match[2];
 
   switch (unit) {
+    case "ms":
+      return value;
     case "s":
       return value * 1000;
     case "m":

@@ -9,6 +9,12 @@ import {
 
 describe("Utils", () => {
   describe("parseTimeWindow", () => {
+    it("should parse milliseconds correctly", () => {
+      expect(parseTimeWindow("50ms")).toBe(50);
+      expect(parseTimeWindow("100ms")).toBe(100);
+      expect(parseTimeWindow("1000ms")).toBe(1000);
+    });
+
     it("should parse seconds correctly", () => {
       expect(parseTimeWindow("30s")).toBe(30000);
       expect(parseTimeWindow("1s")).toBe(1000);
