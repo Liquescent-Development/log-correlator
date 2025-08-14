@@ -7,7 +7,7 @@ import { DataSourceAdapter, LogEvent, CorrelatedEvent, StreamOptions } from './t
 class MockLokiAdapter implements DataSourceAdapter {
   constructor(private events: LogEvent[] = []) {}
 
-  async *createStream(selector: string, options?: StreamOptions): AsyncIterable<LogEvent> {
+  async *createStream(selector: string, _options?: StreamOptions): AsyncIterable<LogEvent> {
     // Simulate realistic delay
     await new Promise(resolve => setTimeout(resolve, 10));
     
@@ -51,7 +51,7 @@ class MockLokiAdapter implements DataSourceAdapter {
 class MockGraylogAdapter implements DataSourceAdapter {
   constructor(private events: LogEvent[] = []) {}
 
-  async *createStream(query: string, options?: StreamOptions): AsyncIterable<LogEvent> {
+  async *createStream(query: string, _options?: StreamOptions): AsyncIterable<LogEvent> {
     await new Promise(resolve => setTimeout(resolve, 15));
     
     // Simple query parsing for Graylog-style queries
@@ -80,7 +80,7 @@ class MockGraylogAdapter implements DataSourceAdapter {
 class MockPromQLAdapter implements DataSourceAdapter {
   constructor(private metrics: LogEvent[] = []) {}
 
-  async *createStream(query: string, options?: StreamOptions): AsyncIterable<LogEvent> {
+  async *createStream(query: string, _options?: StreamOptions): AsyncIterable<LogEvent> {
     await new Promise(resolve => setTimeout(resolve, 20));
     
     const filteredMetrics = this.metrics.filter(metric => {
@@ -536,7 +536,7 @@ describe('Log Correlator End-to-End Tests', () => {
         expect(engine.validateQuery(query)).toBe(false);
         
         await expect(async () => {
-          for await (const _ of engine.correlate(query)) {
+          for await (const _correlation of engine.correlate(query)) {
             // Should not yield any results
           }
         }).rejects.toThrow();
@@ -663,7 +663,7 @@ describe('Log Correlator End-to-End Tests', () => {
       const query = `nonexistent({service="test"})[5m] and on(id) nonexistent({service="test"})[5m]`;
 
       await expect(async () => {
-        for await (const _ of engine.correlate(query)) {
+        for await (const _correlation of engine.correlate(query)) {
           // Should not reach here
         }
       }).rejects.toThrow('Required data source adapter not found');

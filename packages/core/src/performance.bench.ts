@@ -18,13 +18,13 @@ class MockAdapter implements DataSourceAdapter {
     return this.name;
   }
 
-  async *createStream(query: string, options?: StreamOptions): AsyncIterable<LogEvent> {
+  async *createStream(_query: string, _options?: StreamOptions): AsyncIterable<LogEvent> {
     for (const event of this.events) {
       yield event;
     }
   }
 
-  validateQuery(query: string): boolean {
+  validateQuery(_query: string): boolean {
     return true;
   }
 
@@ -132,7 +132,7 @@ class PerformanceBenchmark {
     engine: CorrelationEngine,
     query: string,
     adapters: Map<string, MockAdapter>,
-    expectedCorrelations: number = 0
+    _expectedCorrelations: number = 0
   ): Promise<BenchmarkResult> {
     const startMemory = this.getMemoryUsage();
     const startTime = process.hrtime.bigint();
@@ -146,7 +146,7 @@ class PerformanceBenchmark {
     }
     
     // Set up correlation listener
-    engine.on('correlationFound', (correlation) => {
+    engine.on('correlationFound', (_correlation) => {
       correlationsFound++;
     });
     
@@ -298,7 +298,7 @@ class PerformanceBenchmark {
   /**
    * Benchmark multi-stream correlations
    */
-  async benchmarkMultiStream(options: BenchmarkOptions = {}): Promise<void> {
+  async benchmarkMultiStream(_options: BenchmarkOptions = {}): Promise<void> {
     const streamCounts = [2, 3, 4, 5];
     const eventCount = 500;
     
@@ -535,6 +535,7 @@ class PerformanceBenchmark {
    * Export results to JSON
    */
   exportResults(filename: string = 'benchmark-results.json'): void {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const fs = require('fs');
     const report = {
       timestamp: new Date().toISOString(),
