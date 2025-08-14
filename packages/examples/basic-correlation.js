@@ -3,6 +3,36 @@ const { CorrelationEngine } = require("@liquescent/log-correlator-core");
 const { LokiAdapter } = require("@liquescent/log-correlator-loki");
 const { GraylogAdapter } = require("@liquescent/log-correlator-graylog");
 
+// Mock adapter for CI testing
+class MockAdapter {
+  constructor(name) {
+    this.name = name;
+  }
+  
+  getName() {
+    return this.name;
+  }
+  
+  validateQuery() {
+    return true;
+  }
+  
+  async *createStream() {
+    // Return empty stream for CI
+    yield* [];
+  }
+  
+  extractJoinKeys() {
+    return {};
+  }
+  
+  async destroy() {}
+  
+  async getAvailableStreams() {
+    return [];
+  }
+}
+
 async function main() {
   // Create correlation engine with simple configuration
   const engine = new CorrelationEngine({
@@ -11,26 +41,41 @@ async function main() {
     lateTolerance: 5000, // 5 second late arrival tolerance
   });
 
-  // Add Loki adapter
-  engine.addAdapter(
-    "loki",
-    new LokiAdapter({
-      url: "http://localhost:3100",
-      websocket: false, // Use polling for this example
-      pollInterval: 1000,
-    }),
-  );
+  // In CI, use mock adapters to avoid network connections
+  if (process.env.CI) {
+    console.log("Running in CI mode - using mock adapters");
+    engine.addAdapter("loki", new MockAdapter("loki"));
+    engine.addAdapter("graylog", new MockAdapter("graylog"));
+  } else {
+    // Add Loki adapter
+    engine.addAdapter(
+      "loki",
+      new LokiAdapter({
+        url: "http://localhost:3100",
+        websocket: false, // Use polling for this example
+        pollInterval: 1000,
+      }),
+    );
 
-  // Add Graylog adapter
-  engine.addAdapter(
-    "graylog",
-    new GraylogAdapter({
-      url: "http://localhost:9000",
-      username: "admin",
-      password: "admin",
-      pollInterval: 2000,
-    }),
-  );
+    // Add Graylog adapter
+    engine.addAdapter(
+      "graylog",
+      new GraylogAdapter({
+        url: "http://localhost:9000",
+        username: "admin",
+        password: "admin",
+        pollInterval: 2000,
+      }),
+    );
+  }
+
+  // In CI mode, just validate the setup and exit
+  if (process.env.CI) {
+    console.log("\nCI mode: Skipping actual correlation (no data sources)");
+    console.log("✅ Basic correlation example setup validated");
+    await engine.destroy();
+    return;
+  }
 
   // Example 1: Basic inner join
   console.log("Example 1: Basic Inner Join");

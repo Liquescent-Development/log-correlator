@@ -2,6 +2,36 @@
 const { CorrelationEngine } = require("@liquescent/log-correlator-core");
 const { LokiAdapter } = require("@liquescent/log-correlator-loki");
 
+// Mock adapter for CI testing
+class MockAdapter {
+  constructor(name) {
+    this.name = name;
+  }
+  
+  getName() {
+    return this.name;
+  }
+  
+  validateQuery() {
+    return true;
+  }
+  
+  async *createStream() {
+    // Return empty stream for CI
+    yield* [];
+  }
+  
+  extractJoinKeys() {
+    return {};
+  }
+  
+  async destroy() {}
+  
+  async getAvailableStreams() {
+    return [];
+  }
+}
+
 // Helper function to simulate real-time visualization
 function updateTimelineChart(correlation) {
   console.log(`\n📊 Timeline Update:`);
@@ -91,15 +121,21 @@ async function streamCorrelations() {
     maxMemoryMB: 50, // Conservative memory limit
   });
 
-  // Set up Loki adapter with WebSocket for real-time streaming
-  engine.addAdapter(
-    "loki",
-    new LokiAdapter({
-      url: process.env.LOKI_URL || "http://localhost:3100",
-      websocket: true,
-      authToken: process.env.LOKI_TOKEN,
-    }),
-  );
+  // In CI, use mock adapter to avoid network connections
+  if (process.env.CI) {
+    console.log("Running in CI mode - using mock adapter");
+    engine.addAdapter("loki", new MockAdapter("loki"));
+  } else {
+    // Set up Loki adapter with WebSocket for real-time streaming
+    engine.addAdapter(
+      "loki",
+      new LokiAdapter({
+        url: process.env.LOKI_URL || "http://localhost:3100",
+        websocket: true,
+        authToken: process.env.LOKI_TOKEN,
+      }),
+    );
+  }
 
   // PromQL-style join query
   const query = `
@@ -112,6 +148,14 @@ async function streamCorrelations() {
   console.log("Query:", query.trim());
   console.log("\nListening for correlations...\n");
   console.log("=".repeat(60));
+
+  // In CI mode, just validate the setup and exit
+  if (process.env.CI) {
+    console.log("\nCI mode: Skipping actual correlation (no data sources)");
+    console.log("✅ Streaming correlation example setup validated");
+    await engine.destroy();
+    return;
+  }
 
   // Statistics
   let totalCorrelations = 0;
