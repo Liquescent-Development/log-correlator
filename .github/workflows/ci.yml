@@ -184,8 +184,8 @@ jobs:
           # Run example scripts to verify integration
           cd packages/examples
           npm install
-          node simple-correlation.js
-          node multi-stream.js
+          node basic-correlation.js
+          node streaming-correlation.js
           
       - name: Test query parser
         run: |
