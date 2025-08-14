@@ -420,15 +420,22 @@ export class LokiAdapter implements DataSourceAdapter {
   validateQuery(query: string): boolean {
     // Basic validation for Loki LogQL syntax
     try {
-      // Check for basic LogQL structure
-      if (!query.includes("{") || !query.includes("}")) {
+      // Limit query length to prevent DoS
+      if (!query || query.length > 10000) {
         return false;
       }
 
-      // Check for valid label matchers
-      const labelPattern = /\{([^}]+)\}/;
-      const match = query.match(labelPattern);
-      if (!match) {
+      // Check for basic LogQL structure without regex to avoid ReDoS
+      const openBrace = query.indexOf("{");
+      const closeBrace = query.indexOf("}");
+      
+      if (openBrace === -1 || closeBrace === -1 || openBrace >= closeBrace) {
+        return false;
+      }
+
+      // Extract and validate label content without regex
+      const labelContent = query.substring(openBrace + 1, closeBrace);
+      if (!labelContent || labelContent.trim().length === 0) {
         return false;
       }
 

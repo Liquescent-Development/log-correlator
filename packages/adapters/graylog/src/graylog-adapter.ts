@@ -248,8 +248,9 @@ export class GraylogAdapter implements DataSourceAdapter {
     let graylogQuery = query;
 
     // Replace PromQL-style label matchers with Graylog syntax
-    graylogQuery = graylogQuery.replace(/(\w+)="([^"]+)"/g, "$1:$2");
-    graylogQuery = graylogQuery.replace(/(\w+)='([^']+)'/g, "$1:$2");
+    // Use atomic groups to prevent catastrophic backtracking
+    graylogQuery = graylogQuery.replace(/(\w+)="([^"]*?)"/g, "$1:$2");
+    graylogQuery = graylogQuery.replace(/(\w+)='([^']*?)'/g, "$1:$2");
 
     // Handle AND/OR operators
     graylogQuery = graylogQuery.replace(/\s+AND\s+/gi, " AND ");
@@ -285,6 +286,11 @@ export class GraylogAdapter implements DataSourceAdapter {
   validateQuery(query: string): boolean {
     // Basic validation for Graylog query syntax
     try {
+      // Limit query length to prevent DoS
+      if (!query || query.length > 10000) {
+        return false;
+      }
+
       // Check for basic field:value syntax
       if (query.includes(":") || query.includes("=")) {
         return true;
