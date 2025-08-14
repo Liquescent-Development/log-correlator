@@ -231,6 +231,7 @@ jobs:
       - name: Comment benchmark results
         if: github.event_name == 'pull_request'
         uses: actions/github-script@v6
+        continue-on-error: true
         with:
           script: |
             const fs = require('fs');
@@ -249,12 +250,35 @@ jobs:
             - **P95 Latency**: ${complexResults.latency.p95.toFixed(2)}ms
             - **Memory**: ${complexResults.memory.heapUsed.mean.toFixed(2)}MB`;
             
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: comment
-            });
+            try {
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment
+              });
+              console.log('✅ Benchmark results posted to PR');
+            } catch (error) {
+              console.log('⚠️ Could not post benchmark results as comment:', error.message);
+              console.log('📊 Benchmark results will be available in the action summary and artifacts');
+              
+              // Add to job summary instead
+              await core.summary
+                .addHeading('Benchmark Results', 2)
+                .addHeading('Simple Correlation', 3)
+                .addList([
+                  `Throughput: ${simpleResults.summary.correlationsPerSecond.toFixed(2)} correlations/sec`,
+                  `P95 Latency: ${simpleResults.latency.p95.toFixed(2)}ms`,
+                  `Memory: ${simpleResults.memory.heapUsed.mean.toFixed(2)}MB`
+                ])
+                .addHeading('Complex Correlation', 3)
+                .addList([
+                  `Throughput: ${complexResults.summary.correlationsPerSecond.toFixed(2)} correlations/sec`,
+                  `P95 Latency: ${complexResults.latency.p95.toFixed(2)}ms`,
+                  `Memory: ${complexResults.memory.heapUsed.mean.toFixed(2)}MB`
+                ])
+                .write();
+            }
 
   security:
     name: Security Scan
