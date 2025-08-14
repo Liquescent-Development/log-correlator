@@ -336,7 +336,7 @@ jobs:
       - name: Check file changes
         run: |
           # Ensure no large files
-          large_files=$(find . -type f -size +1M | grep -v node_modules | grep -v .git)
+          large_files=$(find . -type f -size +1M | grep -v node_modules | grep -v .git || true)
           if [ -n "$large_files" ]; then
             echo "Large files detected (>1MB):"
             echo "$large_files"
