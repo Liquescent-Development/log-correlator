@@ -309,16 +309,20 @@ jobs:
           
       - name: Check commit messages
         run: |
-          # Validate conventional commits
-          commits=$(git log --format="%s" origin/${{ github.base_ref }}..HEAD)
-          
-          while IFS= read -r commit; do
+          # Validate conventional commits (excluding merge commits)
+          # Use git rev-list to properly exclude merge commits
+          for sha in $(git rev-list --no-merges origin/${{ github.base_ref }}..HEAD); do
+            commit=$(git log -1 --format="%s" $sha)
+            
+            # Skip empty commits
+            [ -z "$commit" ] && continue
+            
             if ! echo "$commit" | grep -qE "^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\(.+\))?: .+"; then
               echo "Invalid commit message: $commit"
               echo "Please use conventional commit format: type(scope): description"
               exit 1
             fi
-          done <<< "$commits"
+          done
           
       - name: Check PR title
         run: |
