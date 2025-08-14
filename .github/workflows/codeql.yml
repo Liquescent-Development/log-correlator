@@ -22,22 +22,30 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: [ 'javascript', 'typescript' ]
+        language: [ 'javascript' ]
         
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v2
+        uses: github/codeql-action/init@v3
         with:
           languages: ${{ matrix.language }}
           queries: security-and-quality
           
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@v2
+      - name: Install dependencies and build
+        run: |
+          npm ci
+          npm run build
         
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v2
+        uses: github/codeql-action/analyze@v3
         with:
           category: "/language:${{ matrix.language }}"
