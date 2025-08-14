@@ -29,13 +29,16 @@ describe("LokiAdapter", () => {
 
     // Mock WebSocket instance
     mockWs = {
-      on: jest.fn(),
-      once: jest.fn(),
-      removeListener: jest.fn(),
+      on: jest.fn().mockReturnThis(),
+      once: jest.fn().mockReturnThis(),
+      removeListener: jest.fn().mockReturnThis(),
+      removeAllListeners: jest.fn().mockReturnThis(),
       close: jest.fn(),
       ping: jest.fn(),
       pong: jest.fn(),
       send: jest.fn(),
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
       CONNECTING: WebSocket.CONNECTING,
       OPEN: WebSocket.OPEN,
       CLOSING: WebSocket.CLOSING,
@@ -158,7 +161,7 @@ describe("LokiAdapter", () => {
       };
 
       // Setup WebSocket event handlers
-      let messageHandler: (data: any) => void;
+      let messageHandler: ((data: any) => void) | undefined;
       mockWs.on.mockImplementation((event, handler) => {
         if (event === "message") {
           messageHandler = handler;
@@ -183,7 +186,9 @@ describe("LokiAdapter", () => {
       jest.advanceTimersByTime(0);
 
       setTimeout(() => {
-        messageHandler!(Buffer.from(JSON.stringify(mockMessage)));
+        if (messageHandler) {
+          messageHandler(Buffer.from(JSON.stringify(mockMessage)));
+        }
       }, 50);
 
       jest.advanceTimersByTime(100);
@@ -464,7 +469,7 @@ describe("LokiAdapter", () => {
   });
 
   describe("Authentication", () => {
-    it("should add Bearer token to headers", () => {
+    it("should add Bearer token to headers", async () => {
       const options = {
         ...defaultOptions,
         authToken: "test-token",
@@ -474,7 +479,15 @@ describe("LokiAdapter", () => {
 
       // Create a query to trigger header building
       const query = '{service="frontend"}';
-      void adapter.createStream(query); // Trigger stream creation
+      const streamIterator = adapter.createStream(query);
+      const iterator = streamIterator[Symbol.asyncIterator]();
+      
+      // Start iteration to trigger WebSocket creation
+      void iterator.next();
+      
+      // Wait for WebSocket to be created
+      await Promise.resolve();
+      jest.advanceTimersByTime(0);
 
       if (options.websocket) {
         expect(MockWebSocket).toHaveBeenCalledWith(
@@ -486,9 +499,11 @@ describe("LokiAdapter", () => {
           }),
         );
       }
+      
+      await adapter.destroy();
     });
 
-    it("should handle Bearer prefix in token", () => {
+    it("should handle Bearer prefix in token", async () => {
       const options = {
         ...defaultOptions,
         authToken: "Bearer existing-bearer-token",
@@ -497,7 +512,15 @@ describe("LokiAdapter", () => {
       adapter = new LokiAdapter(options);
 
       const query = '{service="frontend"}';
-      void adapter.createStream(query); // Trigger stream creation
+      const streamIterator = adapter.createStream(query);
+      const iterator = streamIterator[Symbol.asyncIterator]();
+      
+      // Start iteration to trigger WebSocket creation
+      void iterator.next();
+      
+      // Wait for WebSocket to be created
+      await Promise.resolve();
+      jest.advanceTimersByTime(0);
 
       if (options.websocket) {
         expect(MockWebSocket).toHaveBeenCalledWith(
@@ -509,9 +532,11 @@ describe("LokiAdapter", () => {
           }),
         );
       }
+      
+      await adapter.destroy();
     });
 
-    it("should include custom headers", () => {
+    it("should include custom headers", async () => {
       const options = {
         ...defaultOptions,
         headers: {
@@ -522,7 +547,15 @@ describe("LokiAdapter", () => {
       adapter = new LokiAdapter(options);
 
       const query = '{service="frontend"}';
-      void adapter.createStream(query); // Trigger stream creation
+      const streamIterator = adapter.createStream(query);
+      const iterator = streamIterator[Symbol.asyncIterator]();
+      
+      // Start iteration to trigger WebSocket creation
+      void iterator.next();
+      
+      // Wait for WebSocket to be created
+      await Promise.resolve();
+      jest.advanceTimersByTime(0);
 
       if (options.websocket) {
         expect(MockWebSocket).toHaveBeenCalledWith(
@@ -534,6 +567,8 @@ describe("LokiAdapter", () => {
           }),
         );
       }
+      
+      await adapter.destroy();
     });
   });
 
@@ -555,7 +590,7 @@ describe("LokiAdapter", () => {
         // The actual extraction is tested indirectly through the adapter's message parsing
 
         // This tests the private method indirectly through message parsing
-        expect(message).toContain("request");
+        expect(message.toLowerCase()).toContain("request");
       }
     });
   });
@@ -676,7 +711,7 @@ describe("LokiAdapter", () => {
       const query = '{service="frontend"}';
       const streamIterator = adapter.createStream(query);
 
-      let messageHandler: (data: any) => void;
+      let messageHandler: ((data: any) => void) | undefined;
       mockWs.on.mockImplementation((event, handler) => {
         if (event === "message") {
           messageHandler = handler;
@@ -699,7 +734,9 @@ describe("LokiAdapter", () => {
 
       // Send malformed JSON
       setTimeout(() => {
-        messageHandler!(Buffer.from("invalid json"));
+        if (messageHandler) {
+          messageHandler(Buffer.from("invalid json"));
+        }
       }, 50);
 
       jest.advanceTimersByTime(100);

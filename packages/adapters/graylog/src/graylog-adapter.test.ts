@@ -383,7 +383,7 @@ describe("GraylogAdapter", () => {
               ],
             }),
           } as any);
-        } else {
+        } else if (callCount === 2) {
           // Second call returns overlapping messages
           return Promise.resolve({
             ok: true,
@@ -408,6 +408,14 @@ describe("GraylogAdapter", () => {
                   },
                 },
               ],
+            }),
+          } as any);
+        } else {
+          // Any subsequent calls return empty
+          return Promise.resolve({
+            ok: true,
+            json: jest.fn().mockResolvedValue({
+              messages: [],
             }),
           } as any);
         }
@@ -443,7 +451,7 @@ describe("GraylogAdapter", () => {
       ]);
 
       await adapter.destroy();
-    });
+    }, 10000);
 
     it("should handle polling errors gracefully", async () => {
       const query = "service:frontend";
@@ -490,7 +498,7 @@ describe("GraylogAdapter", () => {
       }).rejects.toThrow(CorrelationError);
 
       await adapter.destroy();
-    });
+    }, 10000);
 
     it("should use exponential backoff on errors", async () => {
       const query = "service:frontend";

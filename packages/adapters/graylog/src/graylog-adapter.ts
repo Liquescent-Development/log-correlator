@@ -178,30 +178,34 @@ export class GraylogAdapter implements DataSourceAdapter {
     const labels: Record<string, string> = {};
     const joinKeys: Record<string, string> = {};
 
-    for (const [key, value] of Object.entries(message.fields)) {
-      if (typeof value === "string" || typeof value === "number") {
-        labels[key] = String(value);
+    if (message.fields) {
+      for (const [key, value] of Object.entries(message.fields)) {
+        if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+          labels[key] = String(value);
 
-        // Check if this field could be a join key
-        if (
-          key.endsWith("_id") ||
-          key.includes("correlation") ||
-          key.includes("trace")
-        ) {
-          joinKeys[key] = String(value);
+          // Check if this field could be a join key
+          if (
+            key.endsWith("_id") ||
+            key.includes("correlation") ||
+            key.includes("trace")
+          ) {
+            joinKeys[key] = String(value);
+          }
         }
       }
     }
 
-    // Also extract join keys from message content
-    const extractedKeys = this.extractJoinKeys(message.message);
-    Object.assign(joinKeys, extractedKeys);
+    // Also extract join keys from message content if available
+    if (message.message) {
+      const extractedKeys = this.extractJoinKeys(message.message);
+      Object.assign(joinKeys, extractedKeys);
+    }
 
     return {
-      timestamp: message.timestamp,
+      timestamp: message.timestamp || new Date().toISOString(),
       source: "graylog",
       stream: message.source || "unknown",
-      message: message.message,
+      message: message.message || "",
       labels,
       joinKeys,
     };
