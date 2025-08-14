@@ -180,7 +180,11 @@ export class GraylogAdapter implements DataSourceAdapter {
 
     if (message.fields) {
       for (const [key, value] of Object.entries(message.fields)) {
-        if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+        if (
+          typeof value === "string" ||
+          typeof value === "number" ||
+          typeof value === "boolean"
+        ) {
           labels[key] = String(value);
 
           // Check if this field could be a join key

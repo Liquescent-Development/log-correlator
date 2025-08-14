@@ -481,10 +481,10 @@ describe("LokiAdapter", () => {
       const query = '{service="frontend"}';
       const streamIterator = adapter.createStream(query);
       const iterator = streamIterator[Symbol.asyncIterator]();
-      
+
       // Start iteration to trigger WebSocket creation
       void iterator.next();
-      
+
       // Wait for WebSocket to be created
       await Promise.resolve();
       jest.advanceTimersByTime(0);
@@ -499,7 +499,7 @@ describe("LokiAdapter", () => {
           }),
         );
       }
-      
+
       await adapter.destroy();
     });
 
@@ -514,10 +514,10 @@ describe("LokiAdapter", () => {
       const query = '{service="frontend"}';
       const streamIterator = adapter.createStream(query);
       const iterator = streamIterator[Symbol.asyncIterator]();
-      
+
       // Start iteration to trigger WebSocket creation
       void iterator.next();
-      
+
       // Wait for WebSocket to be created
       await Promise.resolve();
       jest.advanceTimersByTime(0);
@@ -532,7 +532,7 @@ describe("LokiAdapter", () => {
           }),
         );
       }
-      
+
       await adapter.destroy();
     });
 
@@ -549,10 +549,10 @@ describe("LokiAdapter", () => {
       const query = '{service="frontend"}';
       const streamIterator = adapter.createStream(query);
       const iterator = streamIterator[Symbol.asyncIterator]();
-      
+
       // Start iteration to trigger WebSocket creation
       void iterator.next();
-      
+
       // Wait for WebSocket to be created
       await Promise.resolve();
       jest.advanceTimersByTime(0);
@@ -567,7 +567,7 @@ describe("LokiAdapter", () => {
           }),
         );
       }
-      
+
       await adapter.destroy();
     });
   });
