@@ -123,8 +123,11 @@ jobs:
       - name: Build packages
         run: npm run build
         
+      - name: Install tools dependencies
+        run: cd tools && npm install
+        
       - name: Build with minification
-        run: node tools/build.js --clean --minify
+        run: node tools/build.js --minify
         
       - name: Verify build outputs
         run: |
