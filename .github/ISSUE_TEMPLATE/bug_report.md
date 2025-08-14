@@ -1,9 +1,9 @@
 ---
 name: Bug Report
 about: Create a report to help us improve
-title: '[BUG] '
+title: "[BUG] "
 labels: bug, needs-triage
-assignees: ''
+assignees: ""
 ---
 
 ## Bug Description
@@ -30,7 +30,7 @@ Steps to reproduce the behavior:
 
 ```javascript
 // Minimal code example that reproduces the issue
-const { CorrelationEngine } = require('@liquescent/log-correlator-core');
+const { CorrelationEngine } = require("@liquescent/log-correlator-core");
 
 // Your code here
 ```

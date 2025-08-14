@@ -1,6 +1,7 @@
 # Migration Guide
 
 ## Table of Contents
+
 - [Version Migration](#version-migration)
 - [Migrating from Other Tools](#migrating-from-other-tools)
 - [Query Language Migration](#query-language-migration)
@@ -23,7 +24,7 @@ engine.setMaxEvents(10000);
 // NEW (1.0)
 const engine = new CorrelationEngine({
   timeWindow: 30000,
-  maxEvents: 10000
+  maxEvents: 10000,
 });
 ```
 
@@ -32,16 +33,16 @@ const engine = new CorrelationEngine({
 ```javascript
 // OLD (0.x)
 const config = {
-  window: 30000,           // Changed
-  events_max: 10000,       // Changed
-  late_tolerance: 5000     // Changed
+  window: 30000, // Changed
+  events_max: 10000, // Changed
+  late_tolerance: 5000, // Changed
 };
 
 // NEW (1.0)
 const config = {
-  timeWindow: 30000,       // Renamed
-  maxEvents: 10000,        // Renamed
-  lateTolerance: 5000      // Renamed
+  timeWindow: 30000, // Renamed
+  maxEvents: 10000, // Renamed
+  lateTolerance: 5000, // Renamed
 };
 ```
 
@@ -49,11 +50,11 @@ const config = {
 
 ```javascript
 // OLD (0.x)
-engine.addSource('loki', adapter);
+engine.addSource("loki", adapter);
 const results = await engine.query(queryString);
 
 // NEW (1.0)
-engine.addAdapter('loki', adapter);
+engine.addAdapter("loki", adapter);
 for await (const result of engine.correlate(queryString)) {
   // Streaming results
 }
@@ -63,22 +64,22 @@ for await (const result of engine.correlate(queryString)) {
 
 ```javascript
 // Automated migration helper
-const { migrate } = require('@liquescent/log-correlator-core/migration');
+const { migrate } = require("@liquescent/log-correlator-core/migration");
 
 // Migrate configuration
 const oldConfig = {
   window: 30000,
   events_max: 10000,
-  sources: ['loki', 'graylog']
+  sources: ["loki", "graylog"],
 };
 
 const newConfig = migrate.config(oldConfig);
-console.log('Migrated config:', newConfig);
+console.log("Migrated config:", newConfig);
 
 // Migrate queries
-const oldQuery = 'loki.frontend & loki.backend on request_id';
+const oldQuery = "loki.frontend & loki.backend on request_id";
 const newQuery = migrate.query(oldQuery);
-console.log('Migrated query:', newQuery);
+console.log("Migrated query:", newQuery);
 ```
 
 ### Upgrading from 1.0 to 2.0
@@ -91,7 +92,7 @@ const { EventDeduplicator, IndexedEventStore, ParallelProcessor } = require('@li
 
 // 2. Enhanced query syntax
 const query = `
-  loki({service="frontend"})[5m] 
+  loki({service="frontend"})[5m]
     and on(request_id) within(30s) group_left(session_id)
     loki({service="backend"})[5m]
 `;
@@ -110,10 +111,10 @@ const options: CorrelationEngineOptions = {
 ```javascript
 // Enable v1 compatibility mode
 const engine = new CorrelationEngine({
-  compatibilityMode: 'v1',
+  compatibilityMode: "v1",
   // v1 style configuration still works
   window: 30000,
-  events_max: 10000
+  events_max: 10000,
 });
 
 // Deprecation warnings will be logged
@@ -143,11 +144,11 @@ const correlatorQuery = `
 `;
 
 // Use migration helper
-const { SplunkMigrator } = require('@liquescent/log-correlator-core/migration');
+const { SplunkMigrator } = require("@liquescent/log-correlator-core/migration");
 const migrator = new SplunkMigrator();
 
 const translatedQuery = migrator.translateQuery(splunkQuery);
-console.log('Translated query:', translatedQuery);
+console.log("Translated query:", translatedQuery);
 ```
 
 #### Data Source Migration
@@ -159,24 +160,25 @@ class SplunkForwarderAdapter {
     // Map Splunk configuration
     this.lokiAdapter = new LokiAdapter({
       url: this.mapUrl(splunkConfig.serverUrl),
-      labels: this.mapIndexToLabels(splunkConfig.index)
+      labels: this.mapIndexToLabels(splunkConfig.index),
     });
   }
-  
+
   mapUrl(splunkUrl) {
     // Convert Splunk URL to Loki URL
-    return splunkUrl.replace(':8089', ':3100')
-                   .replace('/services/collector', '');
+    return splunkUrl
+      .replace(":8089", ":3100")
+      .replace("/services/collector", "");
   }
-  
+
   mapIndexToLabels(index) {
     // Map Splunk index to Loki labels
     return {
       job: index,
-      source: 'splunk-migration'
+      source: "splunk-migration",
     };
   }
-  
+
   async *createStream(query, options) {
     // Translate and forward to Loki
     const lokiQuery = this.translateQuery(query);
@@ -195,16 +197,16 @@ const esQuery = {
   bool: {
     must: [
       { match: { service: "frontend" } },
-      { exists: { field: "request_id" } }
+      { exists: { field: "request_id" } },
     ],
     filter: {
       range: {
         "@timestamp": {
-          gte: "now-5m"
-        }
-      }
-    }
-  }
+          gte: "now-5m",
+        },
+      },
+    },
+  },
 };
 
 // Equivalent log-correlator query
@@ -216,28 +218,28 @@ const correlatorQuery = `
 class ElasticsearchMigrator {
   translateQuery(esQuery) {
     const conditions = [];
-    
+
     if (esQuery.bool?.must) {
-      esQuery.bool.must.forEach(clause => {
+      esQuery.bool.must.forEach((clause) => {
         if (clause.match) {
           const [field, value] = Object.entries(clause.match)[0];
           conditions.push(`${field}="${value}"`);
         }
       });
     }
-    
+
     const timeRange = this.extractTimeRange(esQuery);
-    const source = 'loki'; // or 'graylog'
-    
-    return `${source}({${conditions.join(', ')}})[${timeRange}]`;
+    const source = "loki"; // or 'graylog'
+
+    return `${source}({${conditions.join(", ")}})[${timeRange}]`;
   }
-  
+
   extractTimeRange(esQuery) {
-    const range = esQuery.bool?.filter?.range?.['@timestamp'];
-    if (range?.gte?.includes('now-')) {
-      return range.gte.replace('now-', '');
+    const range = esQuery.bool?.filter?.range?.["@timestamp"];
+    if (range?.gte?.includes("now-")) {
+      return range.gte.replace("now-", "");
     }
-    return '5m';
+    return "5m";
   }
 }
 ```
@@ -247,9 +249,9 @@ class ElasticsearchMigrator {
 ```javascript
 // Map Elasticsearch indices to log-correlator streams
 const indexMapping = {
-  'logstash-frontend-*': 'loki({job="frontend"})',
-  'logstash-backend-*': 'loki({job="backend"})',
-  'application-*': 'graylog(application:*)'
+  "logstash-frontend-*": 'loki({job="frontend"})',
+  "logstash-backend-*": 'loki({job="backend"})',
+  "application-*": "graylog(application:*)",
 };
 
 function migrateIndexPattern(pattern) {
@@ -264,24 +266,24 @@ function migrateIndexPattern(pattern) {
 ```yaml
 # Fluentd configuration
 <match app.**>
-  @type forward
-  <server>
-    host localhost
-    port 24224
-  </server>
+@type forward
+<server>
+host localhost
+port 24224
+</server>
 </match>
 ```
 
 ```javascript
 // Equivalent log-correlator configuration
 const adapter = new LokiAdapter({
-  url: 'http://localhost:3100',
+  url: "http://localhost:3100",
   labels: {
-    source: 'fluentd',
-    tag: 'app'
+    source: "fluentd",
+    tag: "app",
   },
   batchSize: 1000,
-  flushInterval: 1000
+  flushInterval: 1000,
 });
 
 // Create Fluentd-compatible adapter
@@ -289,18 +291,18 @@ class FluentdAdapter {
   constructor(fluentConfig) {
     this.lokiAdapter = new LokiAdapter({
       url: this.mapFluentdToLoki(fluentConfig),
-      transformEvent: this.transformFluentdEvent
+      transformEvent: this.transformFluentdEvent,
     });
   }
-  
+
   transformFluentdEvent(fluentdEvent) {
     return {
       timestamp: new Date(fluentdEvent.time * 1000).toISOString(),
       message: fluentdEvent.record.message,
       labels: {
         tag: fluentdEvent.tag,
-        ...fluentdEvent.record
-      }
+        ...fluentdEvent.record,
+      },
     };
   }
 }
@@ -337,19 +339,22 @@ function addCorrelation(logqlQuery, joinKey, secondStream) {
 // Grafana explore query
 const grafanaQuery = {
   expr: '{job="frontend"} |= "error" | json | line_format "{{.message}}"',
-  refId: 'A',
-  datasource: 'Loki'
+  refId: "A",
+  datasource: "Loki",
 };
 
 // Convert to correlation query
 function migrateGrafanaQuery(grafanaQuery) {
-  const baseQuery = grafanaQuery.expr.split('|')[0].trim();
-  
+  const baseQuery = grafanaQuery.expr.split("|")[0].trim();
+
   return {
     source: grafanaQuery.datasource.toLowerCase(),
     selector: baseQuery,
-    processors: grafanaQuery.expr.split('|').slice(1).map(p => p.trim()),
-    timeRange: '5m' // Default
+    processors: grafanaQuery.expr
+      .split("|")
+      .slice(1)
+      .map((p) => p.trim()),
+    timeRange: "5m", // Default
   };
 }
 
@@ -377,60 +382,60 @@ class NewCustomAdapter {
   constructor(oldAdapter) {
     this.oldAdapter = oldAdapter;
   }
-  
+
   async *createStream(query, options = {}) {
-    const { timeRange = '5m' } = options;
+    const { timeRange = "5m" } = options;
     const endTime = Date.now();
     const startTime = endTime - parseTimeWindow(timeRange);
-    
+
     // Convert old fetch to streaming
     const logs = await this.oldAdapter.fetchLogs(query, startTime, endTime);
-    
+
     for (const log of logs) {
       yield this.transformLog(log);
     }
   }
-  
+
   transformLog(oldLog) {
     return {
       timestamp: oldLog.timestamp || oldLog.time || new Date().toISOString(),
-      message: oldLog.message || oldLog.msg || '',
+      message: oldLog.message || oldLog.msg || "",
       labels: oldLog.labels || oldLog.fields || {},
       joinKeys: this.extractJoinKeys(oldLog),
-      source: 'custom'
+      source: "custom",
     };
   }
-  
+
   extractJoinKeys(log) {
     // Extract potential join keys
     const keys = {};
     const patterns = [
       /request[_-]?id[:=]\s*["']?([^"'\s]+)/i,
       /trace[_-]?id[:=]\s*["']?([^"'\s]+)/i,
-      /session[_-]?id[:=]\s*["']?([^"'\s]+)/i
+      /session[_-]?id[:=]\s*["']?([^"'\s]+)/i,
     ];
-    
+
     const text = JSON.stringify(log);
     patterns.forEach((pattern, index) => {
       const match = text.match(pattern);
       if (match) {
-        const keyName = ['request_id', 'trace_id', 'session_id'][index];
+        const keyName = ["request_id", "trace_id", "session_id"][index];
         keys[keyName] = match[1];
       }
     });
-    
+
     return keys;
   }
-  
+
   validateQuery(query) {
     // Add validation
     return true;
   }
-  
+
   getName() {
-    return 'custom';
+    return "custom";
   }
-  
+
   async destroy() {
     // Cleanup
   }
@@ -448,30 +453,30 @@ class AdaptiveAdapter {
     this.wsRetries = 0;
     this.maxWsRetries = 3;
   }
-  
+
   async *createStream(query, options) {
     if (this.useWebSocket && this.wsRetries < this.maxWsRetries) {
       try {
         yield* this.createWebSocketStream(query, options);
       } catch (error) {
-        console.warn('WebSocket failed, falling back to polling:', error);
+        console.warn("WebSocket failed, falling back to polling:", error);
         this.wsRetries++;
-        
+
         if (this.wsRetries >= this.maxWsRetries) {
           this.useWebSocket = false;
         }
-        
+
         yield* this.createPollingStream(query, options);
       }
     } else {
       yield* this.createPollingStream(query, options);
     }
   }
-  
+
   async *createWebSocketStream(query, options) {
     // WebSocket implementation
   }
-  
+
   async *createPollingStream(query, options) {
     // Polling implementation
   }
@@ -549,7 +554,8 @@ try {
 engine.correlate(query, (error, results) => {});
 
 // USE INSTEAD
-for await (const result of engine.correlate(query)) {}
+for await (const result of engine.correlate(query)) {
+}
 
 // 2. Synchronous methods will be async
 // DEPRECATED
@@ -575,67 +581,70 @@ const engine = new CorrelationEngine({ maxMemoryMB: 100 });
 
 // 1. Old configuration keys (use new names)
 const engine = new CorrelationEngine({
-  window: 30000,        // DEPRECATED: use 'timeWindow'
-  events_max: 10000,    // DEPRECATED: use 'maxEvents'
-  late_tolerance: 5000  // DEPRECATED: use 'lateTolerance'
+  window: 30000, // DEPRECATED: use 'timeWindow'
+  events_max: 10000, // DEPRECATED: use 'maxEvents'
+  late_tolerance: 5000, // DEPRECATED: use 'lateTolerance'
 });
 
 // 2. Synchronous query validation (use async)
-if (engine.validateQuery(query)) {  // DEPRECATED
+if (engine.validateQuery(query)) {
+  // DEPRECATED
   // ...
 }
 
 // Use async version
-if (await engine.validateQuery(query)) {  // RECOMMENDED
+if (await engine.validateQuery(query)) {
+  // RECOMMENDED
   // ...
 }
 
 // 3. Direct event emission for results (use async iteration)
-engine.on('correlation', handler);  // DEPRECATED
+engine.on("correlation", handler); // DEPRECATED
 
 // Use async iteration
-for await (const correlation of engine.correlate(query)) {  // RECOMMENDED
+for await (const correlation of engine.correlate(query)) {
+  // RECOMMENDED
   handler(correlation);
 }
 ```
 
 ### Deprecation Timeline
 
-| Feature | Deprecated In | Removed In | Alternative |
-|---------|--------------|------------|-------------|
-| Callback APIs | v2.0 | v3.0 | Async/await |
-| Old config keys | v1.0 | v2.0 | New key names |
-| Sync validation | v2.0 | v3.0 | Async validation |
-| Event-based results | v2.0 | v3.0 | Async iteration |
-| Global config | v2.0 | v3.0 | Instance config |
+| Feature             | Deprecated In | Removed In | Alternative      |
+| ------------------- | ------------- | ---------- | ---------------- |
+| Callback APIs       | v2.0          | v3.0       | Async/await      |
+| Old config keys     | v1.0          | v2.0       | New key names    |
+| Sync validation     | v2.0          | v3.0       | Async validation |
+| Event-based results | v2.0          | v3.0       | Async iteration  |
+| Global config       | v2.0          | v3.0       | Instance config  |
 
 ### Handling Deprecation Warnings
 
 ```javascript
 // Suppress deprecation warnings (not recommended)
-process.env.SUPPRESS_DEPRECATIONS = 'true';
+process.env.SUPPRESS_DEPRECATIONS = "true";
 
 // Or selectively
-process.env.SUPPRESS_DEPRECATIONS = 'validateQuery,window';
+process.env.SUPPRESS_DEPRECATIONS = "validateQuery,window";
 
 // Log deprecations to file
-const fs = require('fs');
-const deprecationLog = fs.createWriteStream('deprecations.log');
+const fs = require("fs");
+const deprecationLog = fs.createWriteStream("deprecations.log");
 
-process.on('deprecation', (warning) => {
+process.on("deprecation", (warning) => {
   deprecationLog.write(`${new Date().toISOString()} - ${warning.message}\n`);
 });
 
 // Monitor deprecation usage
 const deprecations = new Map();
 
-process.on('deprecation', (warning) => {
+process.on("deprecation", (warning) => {
   const count = deprecations.get(warning.code) || 0;
   deprecations.set(warning.code, count + 1);
 });
 
-process.on('exit', () => {
-  console.log('Deprecation usage:');
+process.on("exit", () => {
+  console.log("Deprecation usage:");
   for (const [code, count] of deprecations) {
     console.log(`  ${code}: ${count} times`);
   }
@@ -677,19 +686,19 @@ process.on('exit', () => {
 
 ```javascript
 // Check current version
-const { version } = require('@liquescent/log-correlator-core/package.json');
-console.log('Current version:', version);
+const { version } = require("@liquescent/log-correlator-core/package.json");
+console.log("Current version:", version);
 
 // Run migration diagnostic
-const { runDiagnostic } = require('@liquescent/log-correlator-core/migration');
+const { runDiagnostic } = require("@liquescent/log-correlator-core/migration");
 
 const report = await runDiagnostic();
-console.log('Migration diagnostic:', report);
+console.log("Migration diagnostic:", report);
 
 // Get migration recommendations
 if (report.issues.length > 0) {
-  console.log('Recommended fixes:');
-  report.issues.forEach(issue => {
+  console.log("Recommended fixes:");
+  report.issues.forEach((issue) => {
     console.log(`- ${issue.description}: ${issue.fix}`);
   });
 }

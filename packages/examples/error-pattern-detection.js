@@ -2,32 +2,38 @@
 // This example shows how to detect error patterns across services
 // and correlate them with metrics to identify root causes
 
-const { CorrelationEngine } = require('@liquescent/log-correlator-core');
-const { LokiAdapter } = require('@liquescent/log-correlator-loki');
-const { PromQLAdapter } = require('@liquescent/log-correlator-promql');
+const { CorrelationEngine } = require("@liquescent/log-correlator-core");
+const { LokiAdapter } = require("@liquescent/log-correlator-loki");
+const { PromQLAdapter } = require("@liquescent/log-correlator-promql");
 
 async function detectErrorPatterns() {
   // Initialize correlation engine
   const engine = new CorrelationEngine({
-    defaultTimeWindow: '5m',
+    defaultTimeWindow: "5m",
     maxEvents: 50000,
-    lateTolerance: '30s'
+    lateTolerance: "30s",
   });
 
   // Add log source adapters
-  engine.addAdapter('loki', new LokiAdapter({
-    url: process.env.LOKI_URL || 'http://localhost:3100',
-    websocket: true,
-    authToken: process.env.LOKI_TOKEN
-  }));
+  engine.addAdapter(
+    "loki",
+    new LokiAdapter({
+      url: process.env.LOKI_URL || "http://localhost:3100",
+      websocket: true,
+      authToken: process.env.LOKI_TOKEN,
+    }),
+  );
 
   // Add metrics adapter for correlation with system metrics
-  engine.addAdapter('promql', new PromQLAdapter({
-    url: process.env.PROMETHEUS_URL || 'http://localhost:9090',
-    authToken: process.env.PROMETHEUS_TOKEN
-  }));
+  engine.addAdapter(
+    "promql",
+    new PromQLAdapter({
+      url: process.env.PROMETHEUS_URL || "http://localhost:9090",
+      authToken: process.env.PROMETHEUS_TOKEN,
+    }),
+  );
 
-  console.log('🔍 Starting error pattern detection...\n');
+  console.log("🔍 Starting error pattern detection...\n");
 
   // Example 1: Detect cascading failures across services
   await detectCascadingFailures(engine);
@@ -46,8 +52,8 @@ async function detectErrorPatterns() {
 }
 
 async function detectCascadingFailures(engine) {
-  console.log('📊 Example 1: Detecting Cascading Failures');
-  console.log('----------------------------------------');
+  console.log("📊 Example 1: Detecting Cascading Failures");
+  console.log("----------------------------------------");
 
   // Query to find errors that cascade from frontend to backend
   const cascadeQuery = `
@@ -57,36 +63,45 @@ async function detectCascadingFailures(engine) {
   `;
 
   const cascadingErrors = [];
-  
+
   for await (const correlation of engine.correlate(cascadeQuery)) {
     cascadingErrors.push(correlation);
-    
+
     // Analyze the cascade pattern
-    const frontendError = correlation.events.find(e => e.labels.service === 'frontend');
-    const backendError = correlation.events.find(e => e.labels.service === 'backend');
-    
+    const frontendError = correlation.events.find(
+      (e) => e.labels.service === "frontend",
+    );
+    const backendError = correlation.events.find(
+      (e) => e.labels.service === "backend",
+    );
+
     if (frontendError && backendError) {
-      const timeDiff = new Date(backendError.timestamp) - new Date(frontendError.timestamp);
-      
+      const timeDiff =
+        new Date(backendError.timestamp) - new Date(frontendError.timestamp);
+
       console.log(`  ⚠️  Cascading failure detected:`);
       console.log(`     Request ID: ${correlation.joinValue}`);
       console.log(`     Frontend error: ${frontendError.message}`);
       console.log(`     Backend error: ${backendError.message}`);
       console.log(`     Cascade time: ${timeDiff}ms`);
-      
+
       // Check if this is a critical pattern
       if (timeDiff < 100) {
-        console.log(`     🔴 CRITICAL: Near-instant cascade indicates synchronous failure!`);
+        console.log(
+          `     🔴 CRITICAL: Near-instant cascade indicates synchronous failure!`,
+        );
       }
     }
   }
 
-  console.log(`\n  Total cascading failures found: ${cascadingErrors.length}\n`);
+  console.log(
+    `\n  Total cascading failures found: ${cascadingErrors.length}\n`,
+  );
 }
 
 async function correlateErrorsWithLatency(engine) {
-  console.log('📊 Example 2: Correlating Errors with High Latency');
-  console.log('------------------------------------------------');
+  console.log("📊 Example 2: Correlating Errors with High Latency");
+  console.log("------------------------------------------------");
 
   // Correlate application errors with high HTTP request duration
   const latencyErrorQuery = `
@@ -100,19 +115,21 @@ async function correlateErrorsWithLatency(engine) {
 
   for await (const correlation of engine.correlate(latencyErrorQuery)) {
     highLatencyErrors.push(correlation);
-    
+
     // Find the metric value
-    const metricEvent = correlation.events.find(e => e.source === 'promql');
-    const errorEvent = correlation.events.find(e => e.labels.level === 'error');
-    
+    const metricEvent = correlation.events.find((e) => e.source === "promql");
+    const errorEvent = correlation.events.find(
+      (e) => e.labels.level === "error",
+    );
+
     if (metricEvent && errorEvent) {
       const latency = parseFloat(metricEvent.labels.__value__);
-      
+
       console.log(`  🐌 High latency error detected:`);
       console.log(`     Request ID: ${correlation.joinValue}`);
       console.log(`     Error: ${errorEvent.message}`);
       console.log(`     P99 Latency: ${latency.toFixed(2)}s`);
-      
+
       // Categorize severity
       if (latency > 5) {
         console.log(`     🔴 SEVERE: Latency > 5s, likely timeout`);
@@ -126,8 +143,8 @@ async function correlateErrorsWithLatency(engine) {
 }
 
 async function detectOrphanedErrors(engine) {
-  console.log('📊 Example 3: Detecting Orphaned Errors');
-  console.log('------------------------------------');
+  console.log("📊 Example 3: Detecting Orphaned Errors");
+  console.log("------------------------------------");
 
   // Find backend errors without corresponding frontend requests
   const orphanQuery = `
@@ -140,17 +157,20 @@ async function detectOrphanedErrors(engine) {
 
   for await (const correlation of engine.correlate(orphanQuery)) {
     orphanedErrors.push(correlation);
-    
+
     const error = correlation.events[0];
     console.log(`  👻 Orphaned backend error:`);
     console.log(`     Request ID: ${correlation.joinValue}`);
     console.log(`     Error: ${error.message}`);
     console.log(`     Timestamp: ${error.timestamp}`);
-    
+
     // Try to identify the cause
-    if (error.message.includes('cron') || error.message.includes('scheduled')) {
+    if (error.message.includes("cron") || error.message.includes("scheduled")) {
       console.log(`     📅 Likely cause: Scheduled job error`);
-    } else if (error.message.includes('timeout') || error.message.includes('connection')) {
+    } else if (
+      error.message.includes("timeout") ||
+      error.message.includes("connection")
+    ) {
       console.log(`     🔌 Likely cause: External service issue`);
     } else {
       console.log(`     ❓ Unknown origin - investigate further`);
@@ -161,9 +181,9 @@ async function detectOrphanedErrors(engine) {
 }
 
 async function monitorErrorsRealTime(engine) {
-  console.log('📊 Example 4: Real-time Error Monitoring');
-  console.log('-------------------------------------');
-  console.log('  Monitoring for 30 seconds...\n');
+  console.log("📊 Example 4: Real-time Error Monitoring");
+  console.log("-------------------------------------");
+  console.log("  Monitoring for 30 seconds...\n");
 
   // Monitor for critical errors in real-time
   const criticalQuery = `
@@ -179,36 +199,40 @@ async function monitorErrorsRealTime(engine) {
   const alertWindow = 10000; // 10 seconds
 
   const timeout = setTimeout(() => {
-    console.log('\n  ✅ Monitoring period complete');
+    console.log("\n  ✅ Monitoring period complete");
   }, 30000);
 
   try {
     for await (const correlation of engine.correlate(criticalQuery)) {
       errorCount++;
       const now = Date.now();
-      
+
       // Check for error spike
       if (now - lastAlertTime > alertWindow) {
         errorCount = 1;
         lastAlertTime = now;
       }
-      
-      console.log(`  🔴 Critical error detected at ${new Date().toISOString()}`);
+
+      console.log(
+        `  🔴 Critical error detected at ${new Date().toISOString()}`,
+      );
       console.log(`     Request: ${correlation.joinValue}`);
-      
+
       // Find status code
-      const statusEvent = correlation.events.find(e => e.labels.status);
+      const statusEvent = correlation.events.find((e) => e.labels.status);
       if (statusEvent) {
         console.log(`     Status: ${statusEvent.labels.status}`);
       }
-      
+
       // Alert on error spike
       if (errorCount >= alertThreshold) {
-        console.log(`\n  🚨 ALERT: Error spike detected! ${errorCount} errors in ${alertWindow/1000}s`);
+        console.log(
+          `\n  🚨 ALERT: Error spike detected! ${errorCount} errors in ${alertWindow / 1000}s`,
+        );
         console.log(`     Consider scaling up or enabling circuit breakers\n`);
         errorCount = 0; // Reset counter after alert
       }
-      
+
       // Stop after timeout
       if (Date.now() - now > 30000) break;
     }
@@ -224,18 +248,22 @@ function analyzeErrorPattern(errors) {
     connectionErrors: 0,
     authErrors: 0,
     serverErrors: 0,
-    other: 0
+    other: 0,
   };
 
-  errors.forEach(error => {
+  errors.forEach((error) => {
     const message = error.message.toLowerCase();
-    if (message.includes('timeout')) {
+    if (message.includes("timeout")) {
       patterns.timeouts++;
-    } else if (message.includes('connection') || message.includes('refused')) {
+    } else if (message.includes("connection") || message.includes("refused")) {
       patterns.connectionErrors++;
-    } else if (message.includes('401') || message.includes('403') || message.includes('auth')) {
+    } else if (
+      message.includes("401") ||
+      message.includes("403") ||
+      message.includes("auth")
+    ) {
       patterns.authErrors++;
-    } else if (message.includes('500') || message.includes('internal')) {
+    } else if (message.includes("500") || message.includes("internal")) {
       patterns.serverErrors++;
     } else {
       patterns.other++;
@@ -247,8 +275,8 @@ function analyzeErrorPattern(errors) {
 
 // Run the examples
 if (require.main === module) {
-  detectErrorPatterns().catch(error => {
-    console.error('Error detection failed:', error);
+  detectErrorPatterns().catch((error) => {
+    console.error("Error detection failed:", error);
     process.exit(1);
   });
 }

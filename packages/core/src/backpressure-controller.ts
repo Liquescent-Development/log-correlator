@@ -1,4 +1,4 @@
-import { EventEmitter } from 'eventemitter3';
+import { EventEmitter } from "eventemitter3";
 
 export interface BackpressureOptions {
   highWaterMark: number;
@@ -14,7 +14,7 @@ export class BackpressureController extends EventEmitter {
     totalDropped: 0,
     currentBufferSize: 0,
     pauseCount: 0,
-    resumeCount: 0
+    resumeCount: 0,
   };
 
   constructor(private options: BackpressureOptions) {
@@ -23,7 +23,7 @@ export class BackpressureController extends EventEmitter {
 
   async *controlFlow<T>(
     source: AsyncIterable<T>,
-    processor: (item: T) => Promise<void>
+    processor: (item: T) => Promise<void>,
   ): AsyncGenerator<T> {
     for await (const item of source) {
       // Check buffer size
@@ -38,7 +38,7 @@ export class BackpressureController extends EventEmitter {
       } else {
         // Drop event if buffer is full
         this.metrics.totalDropped++;
-        this.emit('eventDropped', item);
+        this.emit("eventDropped", item);
         continue;
       }
 
@@ -46,13 +46,13 @@ export class BackpressureController extends EventEmitter {
       while (this.buffer.length > 0 && !this.isPaused) {
         const bufferedItem = this.buffer.shift()!;
         this.metrics.currentBufferSize = this.buffer.length;
-        
+
         try {
           await processor(bufferedItem);
           this.metrics.totalProcessed++;
           yield bufferedItem;
         } catch (error) {
-          this.emit('processingError', { item: bufferedItem, error });
+          this.emit("processingError", { item: bufferedItem, error });
         }
 
         // Resume if buffer is below low water mark
@@ -74,7 +74,7 @@ export class BackpressureController extends EventEmitter {
     if (!this.isPaused) {
       this.isPaused = true;
       this.metrics.pauseCount++;
-      this.emit('paused', { bufferSize: this.buffer.length });
+      this.emit("paused", { bufferSize: this.buffer.length });
     }
   }
 
@@ -82,7 +82,7 @@ export class BackpressureController extends EventEmitter {
     if (this.isPaused) {
       this.isPaused = false;
       this.metrics.resumeCount++;
-      this.emit('resumed', { bufferSize: this.buffer.length });
+      this.emit("resumed", { bufferSize: this.buffer.length });
     }
   }
 

@@ -131,6 +131,7 @@ type(scope): description
 ```
 
 **Types:**
+
 - `feat`: New feature
 - `fix`: Bug fix
 - `docs`: Documentation only
@@ -143,6 +144,7 @@ type(scope): description
 - `chore`: Other changes
 
 **Examples:**
+
 ```bash
 feat(core): add support for custom join functions
 fix(loki): handle connection timeouts properly
@@ -219,22 +221,22 @@ try {
 ### Testing
 
 ```javascript
-describe('CorrelationEngine', () => {
-  describe('correlate', () => {
-    it('should correlate events with matching join keys', async () => {
+describe("CorrelationEngine", () => {
+  describe("correlate", () => {
+    it("should correlate events with matching join keys", async () => {
       // Arrange
       const engine = new CorrelationEngine();
-      const query = 'test query';
-      
+      const query = "test query";
+
       // Act
       const results = [];
       for await (const event of engine.correlate(query)) {
         results.push(event);
       }
-      
+
       // Assert
       expect(results).toHaveLength(1);
-      expect(results[0].joinKey).toBe('expected');
+      expect(results[0].joinKey).toBe("expected");
     });
   });
 });
@@ -320,6 +322,7 @@ npm run docs:serve
 ### Recognition
 
 Contributors are recognized in:
+
 - GitHub contributors page
 - CHANGELOG.md for significant contributions
 - Special mentions for security reports
@@ -349,10 +352,10 @@ npm run clean && npm run build
 
 ```javascript
 // Enable debug logging
-process.env.DEBUG = 'log-correlator:*';
+process.env.DEBUG = "log-correlator:*";
 
 // Use debugger in tests
-it('should work', async () => {
+it("should work", async () => {
   debugger; // Set breakpoint
   const result = await someFunction();
 });
@@ -374,6 +377,7 @@ node tools/load-test.js --scenario complex
 ## Questions?
 
 Feel free to:
+
 - Open a GitHub Discussion
 - Ask in issues
 - Contact maintainers

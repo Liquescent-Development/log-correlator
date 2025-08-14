@@ -3,6 +3,7 @@
 ## Overall Compliance Status: 98%
 
 ### ✅ Repository Structure (100% Compliant)
+
 - ✅ Correct monorepo structure with packages/
 - ✅ Core package at packages/core/
 - ✅ Adapters under packages/adapters/ (loki, graylog, promql)
@@ -15,6 +16,7 @@
 ### ✅ Core Requirements (100% Compliant)
 
 #### 1. JavaScript-First API Design ✅
+
 - ✅ Clean CommonJS output (`main: "dist/index.js"`)
 - ✅ TypeScript definitions (`types: "dist/index.d.ts"`)
 - ✅ Simple JavaScript examples in packages/examples/
@@ -22,6 +24,7 @@
 - ✅ Returns plain JavaScript objects (CorrelatedEvent structure)
 
 #### 2. Real-Time Stream Processing ✅
+
 - ✅ AsyncIterable/AsyncGenerator pattern implemented
 - ✅ Time-windowed correlation with TimeWindow class
 - ✅ Memory-efficient with bounded buffers (BackpressureController)
@@ -29,6 +32,7 @@
 - ✅ Real-time emission via `joinRealtime()` method
 
 #### 3. Query Language ✅
+
 - ✅ PromQL-inspired syntax via PeggyQueryParser
 - ✅ Multiple join types supported (and, or, unless)
 - ✅ Flexible correlation keys
@@ -37,11 +41,13 @@
 ### ✅ Package Architecture (100% Compliant)
 
 #### Core Package ✅
+
 - ✅ Package name: @liquescent/log-correlator-core
 - ✅ Main exports: CorrelationEngine, StreamJoiner, etc.
 - ✅ Clean JavaScript API as shown in examples
 
 #### Adapter Packages ✅
+
 - ✅ Loki adapter with WebSocket and polling support
 - ✅ Graylog adapter with polling support
 - ✅ PromQL adapter for Prometheus integration
@@ -50,6 +56,7 @@
 ### ✅ Query Language Specification (100% Compliant)
 
 #### Supported Features ✅
+
 - ✅ Basic joins: `and on(label)`, `or on(label)`, `unless on(label)`
 - ✅ Ignoring clause: `ignoring(labels)`
 - ✅ Grouping modifiers: `group_left()`, `group_right()`
@@ -61,6 +68,7 @@
 ### ✅ Data Model (100% Compliant)
 
 #### LogEvent Structure ✅
+
 ```typescript
 {
   timestamp: string,    // ISO string
@@ -73,6 +81,7 @@
 ```
 
 #### CorrelatedEvent Structure ✅
+
 ```typescript
 {
   correlationId: string,
@@ -92,22 +101,26 @@
 ### ✅ Technical Implementation (100% Compliant)
 
 #### Stream Processing ✅
+
 - ✅ AsyncIterable pattern for streams
 - ✅ Sliding time windows (TimeWindow class)
 - ✅ Backpressure handling (BackpressureController)
 - ✅ Memory-bounded with configurable limits
 
 #### Adapter Interface ✅
+
 - ✅ Complete DataSourceAdapter interface implemented
 - ✅ All required methods present
 - ✅ Optional getAvailableStreams() method
 
 #### Query Parser ✅
+
 - ✅ PEG.js-based parser (using Peggy)
 - ✅ Support for all query features
 - ✅ Error reporting with details
 
 #### Memory Management ✅
+
 - ✅ Configurable memory limits
 - ✅ Garbage collection with gcInterval
 - ✅ Memory monitoring via PerformanceMonitor
@@ -116,11 +129,13 @@
 ### ✅ Configuration Options (100% Compliant)
 
 #### Engine Configuration ✅
+
 - ✅ All specified options supported
 - ✅ PromQL-style duration strings ('5m', '30s')
 - ✅ Memory and performance tuning options
 
 #### Adapter Configuration ✅
+
 - ✅ Loki: WebSocket, polling, auth, retries
 - ✅ Graylog: Polling, auth, retries
 
@@ -133,6 +148,7 @@
 ### ✅ Performance Features (90% Compliant)
 
 #### Implemented ✅
+
 - ✅ Event deduplication (EventDeduplicator class)
 - ✅ Index-based lookup (IndexedEventStore)
 - ✅ Parallel processing (ParallelProcessor)
@@ -140,6 +156,7 @@
 - ✅ Performance monitoring
 
 #### Performance Targets
+
 - ⚠️ Latency: Not formally benchmarked but real-time emission implemented
 - ⚠️ Throughput: Not formally benchmarked
 - ✅ Memory: Bounded with configurable limits

@@ -1,9 +1,9 @@
 ---
 name: Feature Request
 about: Suggest an idea for this project
-title: '[FEATURE] '
+title: "[FEATURE] "
 labels: enhancement
-assignees: ''
+assignees: ""
 ---
 
 ## Problem Statement
@@ -24,7 +24,7 @@ assignees: ''
 
 ```javascript
 // Example code showing how the feature would work
-const { CorrelationEngine } = require('@liquescent/log-correlator-core');
+const { CorrelationEngine } = require("@liquescent/log-correlator-core");
 
 // Your proposed API usage
 ```
@@ -36,7 +36,7 @@ const { CorrelationEngine } = require('@liquescent/log-correlator-core');
 - [ ] Improved performance
 - [ ] Better developer experience
 - [ ] New capability
-- [ ] Other: 
+- [ ] Other:
 
 ## Implementation Considerations
 

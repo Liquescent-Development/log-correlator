@@ -45,8 +45,8 @@ Fixes #(issue number)
 
 ### Test Configuration
 
-* Node version:
-* Operating System:
+- Node version:
+- Operating System:
 
 ## Screenshots (if appropriate)
 

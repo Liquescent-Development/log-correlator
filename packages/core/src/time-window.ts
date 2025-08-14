@@ -1,5 +1,5 @@
-import { LogEvent } from './types';
-import { LRUCache } from 'lru-cache';
+import { LogEvent } from "./types";
+import { LRUCache } from "lru-cache";
 
 export interface TimeWindowOptions {
   windowSize: number;
@@ -17,13 +17,13 @@ export class TimeWindow {
     const now = Date.now();
     this.windowStart = now;
     this.windowEnd = now + options.windowSize;
-    
+
     // Initialize LRU cache with memory-based sizing
     // Use maxSize to limit by memory consumption instead of key count
     // Estimate ~1KB per event (conservative estimate for typical log event)
     const estimatedBytesPerEvent = 1024;
     const maxSizeBytes = options.maxEvents * estimatedBytesPerEvent;
-    
+
     this.events = new LRUCache<string, LogEvent[]>({
       // No fixed max key limit - let it grow as needed
       maxSize: maxSizeBytes,
@@ -37,18 +37,18 @@ export class TimeWindow {
       // Keep frequently accessed keys active
       updateAgeOnGet: true,
       // Allow stale entries to be returned while revalidating
-      allowStale: false
+      allowStale: false,
     });
   }
 
   addEvent(event: LogEvent, key: string): boolean {
     const eventTime = new Date(event.timestamp).getTime();
-    
+
     // Check if event is within window (with late tolerance)
     if (eventTime < this.windowStart - this.options.lateTolerance) {
       return false; // Too old
     }
-    
+
     if (eventTime > this.windowEnd) {
       return false; // Too new for this window
     }
@@ -66,10 +66,10 @@ export class TimeWindow {
       // if we exceed maxSize, ensuring memory bounds are respected
       this.events.set(key, keyEvents);
     }
-    
+
     keyEvents.push(event);
     this.eventCount++;
-    
+
     return true;
   }
 
@@ -88,7 +88,7 @@ export class TimeWindow {
   getTimeRange(): { start: string; end: string } {
     return {
       start: new Date(this.windowStart).toISOString(),
-      end: new Date(this.windowEnd).toISOString()
+      end: new Date(this.windowEnd).toISOString(),
     };
   }
 

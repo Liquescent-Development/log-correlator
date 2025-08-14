@@ -1,4 +1,4 @@
-import { EventEmitter } from 'eventemitter3';
+import { EventEmitter } from "eventemitter3";
 
 export interface PerformanceMetrics {
   eventsProcessed: number;
@@ -35,11 +35,11 @@ export class PerformanceMonitor extends EventEmitter {
         heapUsed: 0,
         heapTotal: 0,
         external: 0,
-        rss: 0
+        rss: 0,
       },
       errors: 0,
       startTime: now,
-      uptime: 0
+      uptime: 0,
     };
     this.lastThroughputCheck = now;
   }
@@ -51,7 +51,7 @@ export class PerformanceMonitor extends EventEmitter {
 
     this.monitoringInterval = setInterval(() => {
       this.updateMetrics();
-      this.emit('metrics', this.getMetrics());
+      this.emit("metrics", this.getMetrics());
     }, this.intervalMs);
   }
 
@@ -66,7 +66,7 @@ export class PerformanceMonitor extends EventEmitter {
     this.metrics.eventsProcessed++;
     const latency = Date.now() - startTime;
     this.latencies.push(latency);
-    
+
     // Keep only last 1000 latencies to avoid memory growth
     if (this.latencies.length > 1000) {
       this.latencies.shift();
@@ -83,46 +83,46 @@ export class PerformanceMonitor extends EventEmitter {
 
   private updateMetrics(): void {
     const now = Date.now();
-    
+
     // Update uptime
     this.metrics.uptime = now - this.metrics.startTime;
-    
+
     // Calculate average latency
     if (this.latencies.length > 0) {
       const sum = this.latencies.reduce((a, b) => a + b, 0);
       this.metrics.averageLatency = sum / this.latencies.length;
     }
-    
+
     // Calculate throughput (events per second)
     const timeDiff = (now - this.lastThroughputCheck) / 1000;
     const eventDiff = this.metrics.eventsProcessed - this.lastEventCount;
     this.metrics.throughput = eventDiff / timeDiff;
-    
+
     this.lastThroughputCheck = now;
     this.lastEventCount = this.metrics.eventsProcessed;
-    
+
     // Update memory usage
     const memUsage = process.memoryUsage();
     this.metrics.memoryUsage = {
       heapUsed: memUsage.heapUsed,
       heapTotal: memUsage.heapTotal,
       external: memUsage.external,
-      rss: memUsage.rss
+      rss: memUsage.rss,
     };
-    
+
     // Check for high memory usage
     const memoryMB = memUsage.heapUsed / 1024 / 1024;
     if (memoryMB > 100) {
-      this.emit('highMemoryUsage', { usedMB: memoryMB });
+      this.emit("highMemoryUsage", { usedMB: memoryMB });
     }
-    
+
     // Check for performance issues
     if (this.metrics.averageLatency > 100) {
-      this.emit('highLatency', { averageMs: this.metrics.averageLatency });
+      this.emit("highLatency", { averageMs: this.metrics.averageLatency });
     }
-    
+
     if (this.metrics.throughput < 10 && this.metrics.eventsProcessed > 100) {
-      this.emit('lowThroughput', { eventsPerSecond: this.metrics.throughput });
+      this.emit("lowThroughput", { eventsPerSecond: this.metrics.throughput });
     }
   }
 
@@ -141,11 +141,11 @@ export class PerformanceMonitor extends EventEmitter {
         heapUsed: 0,
         heapTotal: 0,
         external: 0,
-        rss: 0
+        rss: 0,
       },
       errors: 0,
       startTime: now,
-      uptime: 0
+      uptime: 0,
     };
     this.latencies = [];
     this.lastThroughputCheck = now;

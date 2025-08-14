@@ -1,17 +1,20 @@
-import { EventEmitter } from 'eventemitter3';
+import { EventEmitter } from "eventemitter3";
 import {
   CorrelationEngineOptions,
   DataSourceAdapter,
   LogEvent,
   CorrelatedEvent,
-  CorrelationError
-} from './types';
-import { StreamJoiner } from './stream-joiner';
-import { MultiStreamJoiner } from './multi-stream-joiner';
-import { BackpressureController } from './backpressure-controller';
-import { PerformanceMonitor } from './performance-monitor';
-import { parseTimeWindow } from './utils';
-import { PeggyQueryParser, ParsedQuery } from '@liquescent/log-correlator-query-parser';
+  CorrelationError,
+} from "./types";
+import { StreamJoiner } from "./stream-joiner";
+import { MultiStreamJoiner } from "./multi-stream-joiner";
+import { BackpressureController } from "./backpressure-controller";
+import { PerformanceMonitor } from "./performance-monitor";
+import { parseTimeWindow } from "./utils";
+import {
+  PeggyQueryParser,
+  ParsedQuery,
+} from "@liquescent/log-correlator-query-parser";
 
 /**
  * Main correlation engine for real-time log stream processing
@@ -39,39 +42,44 @@ export class CorrelationEngine extends EventEmitter {
 
   constructor(options: CorrelationEngineOptions = {}) {
     super();
-    
+
     this.options = {
-      defaultTimeWindow: options.defaultTimeWindow || '5m',
-      timeWindow: options.timeWindow || parseTimeWindow(options.defaultTimeWindow || '5m'),
+      defaultTimeWindow: options.defaultTimeWindow || "5m",
+      timeWindow:
+        options.timeWindow ||
+        parseTimeWindow(options.defaultTimeWindow || "5m"),
       maxEvents: options.maxEvents || 10000,
-      lateTolerance: typeof options.lateTolerance === 'string' 
-        ? parseTimeWindow(options.lateTolerance)
-        : options.lateTolerance || 30000,
-      joinType: options.joinType || 'inner',
+      lateTolerance:
+        typeof options.lateTolerance === "string"
+          ? parseTimeWindow(options.lateTolerance)
+          : options.lateTolerance || 30000,
+      joinType: options.joinType || "inner",
       bufferSize: options.bufferSize || 1000,
-      processingInterval: typeof options.processingInterval === 'string'
-        ? parseTimeWindow(options.processingInterval)
-        : options.processingInterval || 100,
+      processingInterval:
+        typeof options.processingInterval === "string"
+          ? parseTimeWindow(options.processingInterval)
+          : options.processingInterval || 100,
       maxMemoryMB: options.maxMemoryMB || 100,
-      gcInterval: typeof options.gcInterval === 'string'
-        ? parseTimeWindow(options.gcInterval)
-        : options.gcInterval || 30000
+      gcInterval:
+        typeof options.gcInterval === "string"
+          ? parseTimeWindow(options.gcInterval)
+          : options.gcInterval || 30000,
     };
 
     // Initialize query parsers
     this.queryParser = new PeggyQueryParser();
-    
+
     // Initialize performance monitor
     this.performanceMonitor = new PerformanceMonitor(5000);
     this.performanceMonitor.start();
-    
+
     // Set up performance monitoring events
-    this.performanceMonitor.on('metrics', (metrics) => {
-      this.emit('performanceMetrics', metrics);
+    this.performanceMonitor.on("metrics", (metrics) => {
+      this.emit("performanceMetrics", metrics);
     });
-    
-    this.performanceMonitor.on('highMemoryUsage', (info) => {
-      this.emit('memoryWarning', info);
+
+    this.performanceMonitor.on("highMemoryUsage", (info) => {
+      this.emit("memoryWarning", info);
     });
 
     // Initialize backpressure controller if needed
@@ -79,7 +87,7 @@ export class CorrelationEngine extends EventEmitter {
       this.backpressureController = new BackpressureController({
         highWaterMark: options.bufferSize,
         lowWaterMark: Math.floor(options.bufferSize * 0.5),
-        maxBufferSize: options.bufferSize * 2
+        maxBufferSize: options.bufferSize * 2,
       });
     }
 
@@ -91,11 +99,11 @@ export class CorrelationEngine extends EventEmitter {
     if (this.adapters.has(name)) {
       throw new CorrelationError(
         `Adapter ${name} already registered`,
-        'ADAPTER_EXISTS'
+        "ADAPTER_EXISTS",
       );
     }
     this.adapters.set(name, adapter);
-    this.emit('adapterAdded', name);
+    this.emit("adapterAdded", name);
   }
 
   getAdapter(name: string): DataSourceAdapter | undefined {
@@ -105,37 +113,39 @@ export class CorrelationEngine extends EventEmitter {
   async *correlate(query: string): AsyncGenerator<CorrelatedEvent> {
     // Parse the query (simplified for now - would use full parser in production)
     const parsedQuery = this.parseQuery(query);
-    
+
     // Check if this is a multi-stream query (3+ streams)
     const allStreams = [parsedQuery.leftStream, parsedQuery.rightStream];
-    if (parsedQuery.additionalStreams && parsedQuery.additionalStreams.length > 0) {
+    if (
+      parsedQuery.additionalStreams &&
+      parsedQuery.additionalStreams.length > 0
+    ) {
       allStreams.push(...parsedQuery.additionalStreams);
     }
 
     // Validate all adapters exist
     const adapters: DataSourceAdapter[] = [];
     const streamInfo: { name: string; stream: AsyncIterable<LogEvent> }[] = [];
-    
+
     for (const streamQuery of allStreams) {
       const adapter = this.getAdapterForSource(streamQuery.source);
       if (!adapter) {
         throw new CorrelationError(
-          'Required data source adapter not found',
-          'ADAPTER_NOT_FOUND',
-          { 
+          "Required data source adapter not found",
+          "ADAPTER_NOT_FOUND",
+          {
             source: streamQuery.source,
-            availableAdapters: Array.from(this.adapters.keys())
-          }
+            availableAdapters: Array.from(this.adapters.keys()),
+          },
         );
       }
       adapters.push(adapter);
-      
+
       // Create stream
-      const stream = adapter.createStream(
-        streamQuery.selector,
-        { timeRange: streamQuery.timeRange }
-      );
-      
+      const stream = adapter.createStream(streamQuery.selector, {
+        timeRange: streamQuery.timeRange,
+      });
+
       // Wrap the stream to record events as they're processed
       const instrumentedStream = this.instrumentStream(stream);
       streamInfo.push({ name: streamQuery.source, stream: instrumentedStream });
@@ -146,12 +156,14 @@ export class CorrelationEngine extends EventEmitter {
       const multiJoiner = new MultiStreamJoiner({
         joinType: parsedQuery.joinType,
         joinKeys: parsedQuery.joinKeys,
-        timeWindow: parseTimeWindow(parsedQuery.timeWindow || this.options.defaultTimeWindow),
+        timeWindow: parseTimeWindow(
+          parsedQuery.timeWindow || this.options.defaultTimeWindow,
+        ),
         lateTolerance: this.options.lateTolerance as number,
         maxEvents: this.options.maxEvents,
         temporal: parsedQuery.temporal,
         labelMappings: parsedQuery.labelMappings,
-        filter: parsedQuery.filter
+        filter: parsedQuery.filter,
       });
 
       this.activeJoiners.add(multiJoiner);
@@ -160,7 +172,7 @@ export class CorrelationEngine extends EventEmitter {
         // Perform multi-stream join and yield results
         for await (const correlation of multiJoiner.joinMultiple(streamInfo)) {
           this.performanceMonitor.recordCorrelation();
-          this.emit('correlationFound', correlation);
+          this.emit("correlationFound", correlation);
           yield correlation;
         }
       } finally {
@@ -172,23 +184,30 @@ export class CorrelationEngine extends EventEmitter {
       const joiner = new StreamJoiner({
         joinType: parsedQuery.joinType,
         joinKeys: parsedQuery.joinKeys,
-        timeWindow: parseTimeWindow(parsedQuery.timeWindow || this.options.defaultTimeWindow),
+        timeWindow: parseTimeWindow(
+          parsedQuery.timeWindow || this.options.defaultTimeWindow,
+        ),
         lateTolerance: this.options.lateTolerance as number,
         maxEvents: this.options.maxEvents,
-        temporal: parsedQuery.temporal ? parseTimeWindow(parsedQuery.temporal) : undefined,
+        temporal: parsedQuery.temporal
+          ? parseTimeWindow(parsedQuery.temporal)
+          : undefined,
         ignoring: parsedQuery.ignoring,
         grouping: parsedQuery.grouping,
         labelMappings: parsedQuery.labelMappings,
-        filter: parsedQuery.filter
+        filter: parsedQuery.filter,
       });
 
       this.activeJoiners.add(joiner);
 
       try {
         // Perform join and yield results
-        for await (const correlation of joiner.join(streamInfo[0].stream, streamInfo[1].stream)) {
+        for await (const correlation of joiner.join(
+          streamInfo[0].stream,
+          streamInfo[1].stream,
+        )) {
           this.performanceMonitor.recordCorrelation();
-          this.emit('correlationFound', correlation);
+          this.emit("correlationFound", correlation);
           yield correlation;
         }
       } finally {
@@ -201,10 +220,10 @@ export class CorrelationEngine extends EventEmitter {
   validateQuery(query: string): boolean {
     try {
       // Normalize the query by trimming and collapsing whitespace
-      const normalizedQuery = query.trim().replace(/\s+/g, ' ');
+      const normalizedQuery = query.trim().replace(/\s+/g, " ");
       const result = this.queryParser.validate(normalizedQuery);
       if (result.valid) return true;
-      
+
       return false;
     } catch {
       return false;
@@ -214,11 +233,11 @@ export class CorrelationEngine extends EventEmitter {
   private parseQuery(query: string): ParsedQuery {
     try {
       // Trim whitespace and normalize the query before parsing
-      const normalizedQuery = query.trim().replace(/\s+/g, ' ');
-      
+      const normalizedQuery = query.trim().replace(/\s+/g, " ");
+
       // Parse the query using the Peggy parser
       const parsed = this.queryParser.parse(normalizedQuery) as any;
-      
+
       // Create a ParsedQuery object with all required properties
       const result: ParsedQuery = {
         leftStream: parsed.leftStream,
@@ -231,42 +250,51 @@ export class CorrelationEngine extends EventEmitter {
         ignoring: parsed.ignoring,
         labelMappings: parsed.labelMappings,
         filter: parsed.filter,
-        additionalStreams: parsed.additionalStreams
+        additionalStreams: parsed.additionalStreams,
       };
-      
+
       // Ensure timeWindow is set if not provided
       if (!result.timeWindow) {
         result.timeWindow = this.options.defaultTimeWindow;
       }
-      
+
       return this.validateParsedQuery(result, normalizedQuery);
     } catch (error) {
       // Handle parse errors
-      const message = error instanceof Error ? error.message : 'Invalid query syntax';
-      throw new CorrelationError(message, 'QUERY_PARSE_ERROR', { query, error });
+      const message =
+        error instanceof Error ? error.message : "Invalid query syntax";
+      throw new CorrelationError(message, "QUERY_PARSE_ERROR", {
+        query,
+        error,
+      });
     }
   }
 
-  private validateParsedQuery(result: ParsedQuery, _originalQuery: string): ParsedQuery {
+  private validateParsedQuery(
+    result: ParsedQuery,
+    _originalQuery: string,
+  ): ParsedQuery {
     // Validate that we have the required streams
     if (!result.leftStream || !result.rightStream) {
-      throw new Error('Query must include at least two streams');
+      throw new Error("Query must include at least two streams");
     }
-    
+
     // Validate join type
     if (!result.joinType) {
-      throw new Error('Query must specify a join type (and, or, unless)');
+      throw new Error("Query must specify a join type (and, or, unless)");
     }
-    
+
     // Validate join keys
     if (!result.joinKeys || result.joinKeys.length === 0) {
-      throw new Error('Query must specify join keys with on() clause');
+      throw new Error("Query must specify join keys with on() clause");
     }
-    
+
     return result;
   }
 
-  private async *instrumentStream(stream: AsyncIterable<LogEvent>): AsyncGenerator<LogEvent> {
+  private async *instrumentStream(
+    stream: AsyncIterable<LogEvent>,
+  ): AsyncGenerator<LogEvent> {
     for await (const event of stream) {
       const startTime = new Date(event.timestamp).getTime();
       this.performanceMonitor.recordEvent(startTime);
@@ -297,9 +325,12 @@ export class CorrelationEngine extends EventEmitter {
       // Check memory usage
       const memoryUsage = process.memoryUsage();
       const memoryMB = memoryUsage.heapUsed / 1024 / 1024;
-      
+
       if (memoryMB > this.options.maxMemoryMB) {
-        this.emit('memoryWarning', { usedMB: memoryMB, maxMB: this.options.maxMemoryMB });
+        this.emit("memoryWarning", {
+          usedMB: memoryMB,
+          maxMB: this.options.maxMemoryMB,
+        });
       }
     }, this.options.gcInterval as number);
   }
@@ -307,13 +338,13 @@ export class CorrelationEngine extends EventEmitter {
   async destroy(): Promise<void> {
     // Stop performance monitor
     this.performanceMonitor.stop();
-    
+
     // Clear garbage collection interval
     if (this.gcInterval) {
       clearInterval(this.gcInterval);
       this.gcInterval = undefined;
     }
-    
+
     // Clean up all joiners
     for (const joiner of this.activeJoiners) {
       joiner.cleanup();

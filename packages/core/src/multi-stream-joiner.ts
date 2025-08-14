@@ -1,6 +1,6 @@
-import { LogEvent, CorrelatedEvent } from './types';
-import { JoinType } from '@liquescent/log-correlator-query-parser';
-import { parseTimeWindow } from './utils';
+import { LogEvent, CorrelatedEvent } from "./types";
+import { JoinType } from "@liquescent/log-correlator-query-parser";
+import { parseTimeWindow } from "./utils";
 
 export interface MultiStreamJoinerOptions {
   joinType: JoinType;
@@ -35,17 +35,17 @@ export class MultiStreamJoiner {
   }
 
   async *joinMultiple(
-    streams: Array<{ name: string; stream: AsyncIterable<LogEvent> }>
+    streams: Array<{ name: string; stream: AsyncIterable<LogEvent> }>,
   ): AsyncGenerator<CorrelatedEvent> {
-    const streamData: StreamData[] = streams.map(s => ({
+    const streamData: StreamData[] = streams.map((s) => ({
       name: s.name,
       events: new Map(),
-      stream: s.stream
+      stream: s.stream,
     }));
 
     // Process all streams concurrently
-    const promises = streamData.map(sd => 
-      this.processStream(sd.stream, sd.events, sd.name)
+    const promises = streamData.map((sd) =>
+      this.processStream(sd.stream, sd.events, sd.name),
     );
 
     // Start correlation checking
@@ -57,7 +57,7 @@ export class MultiStreamJoiner {
     try {
       // Wait for all streams to complete
       await Promise.all(promises);
-      
+
       // Final correlation check
       const correlations = this.findMultiStreamCorrelations(streamData);
       for (const correlation of correlations) {
@@ -73,7 +73,7 @@ export class MultiStreamJoiner {
   private async processStream(
     stream: AsyncIterable<LogEvent>,
     storage: Map<string, LogEvent[]>,
-    _streamName: string
+    _streamName: string,
   ): Promise<void> {
     for await (const event of stream) {
       const joinKeyValue = this.extractJoinKey(event);
@@ -90,13 +90,15 @@ export class MultiStreamJoiner {
     // Check for label mappings
     if (this.options.labelMappings) {
       for (const mapping of this.options.labelMappings) {
-        const leftValue = event.labels[mapping.left] || event.joinKeys?.[mapping.left];
-        const rightValue = event.labels[mapping.right] || event.joinKeys?.[mapping.right];
+        const leftValue =
+          event.labels[mapping.left] || event.joinKeys?.[mapping.left];
+        const rightValue =
+          event.labels[mapping.right] || event.joinKeys?.[mapping.right];
         if (leftValue) return leftValue;
         if (rightValue) return rightValue;
       }
     }
-    
+
     // Standard join key extraction
     for (const key of this.options.joinKeys) {
       if (event.labels[key]) {
@@ -109,7 +111,9 @@ export class MultiStreamJoiner {
     return null;
   }
 
-  private findMultiStreamCorrelations(streamData: StreamData[]): CorrelatedEvent[] {
+  private findMultiStreamCorrelations(
+    streamData: StreamData[],
+  ): CorrelatedEvent[] {
     const correlations: CorrelatedEvent[] = [];
     const processedKeys = new Set<string>();
 
@@ -124,7 +128,7 @@ export class MultiStreamJoiner {
     // Process each unique key
     for (const key of allKeys) {
       if (processedKeys.has(key)) continue;
-      
+
       const eventsForKey: LogEvent[] = [];
       const matchedStreams: string[] = [];
 
@@ -140,20 +144,22 @@ export class MultiStreamJoiner {
       // Apply join type logic
       const shouldInclude = this.shouldIncludeCorrelation(
         matchedStreams.length,
-        streamData.length
+        streamData.length,
       );
 
       if (shouldInclude && eventsForKey.length > 0) {
         // Apply temporal filtering if specified
         const temporalFiltered = this.applyTemporalFilter(eventsForKey);
-        
+
         if (temporalFiltered.length > 0) {
-          correlations.push(this.createCorrelation(
-            key,
-            temporalFiltered,
-            matchedStreams,
-            streamData.length
-          ));
+          correlations.push(
+            this.createCorrelation(
+              key,
+              temporalFiltered,
+              matchedStreams,
+              streamData.length,
+            ),
+          );
         }
       }
 
@@ -163,15 +169,18 @@ export class MultiStreamJoiner {
     return correlations;
   }
 
-  private shouldIncludeCorrelation(matchedCount: number, totalStreams: number): boolean {
+  private shouldIncludeCorrelation(
+    matchedCount: number,
+    totalStreams: number,
+  ): boolean {
     switch (this.options.joinType) {
-      case 'and':
+      case "and":
         // Inner join - all streams must have events
         return matchedCount === totalStreams;
-      case 'or':
+      case "or":
         // Left join - at least one stream must have events
         return matchedCount > 0;
-      case 'unless':
+      case "unless":
         // Anti-join - only single stream events
         return matchedCount === 1;
       default:
@@ -185,8 +194,9 @@ export class MultiStreamJoiner {
     }
 
     // Sort events by timestamp
-    const sorted = [...events].sort((a, b) => 
-      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    const sorted = [...events].sort(
+      (a, b) =>
+        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
     );
 
     if (sorted.length === 0) return [];
@@ -215,7 +225,7 @@ export class MultiStreamJoiner {
     if (!filterMatch) return true;
 
     const filterExpr = filterMatch[1];
-    const filters = filterExpr.split(',').map(f => f.trim());
+    const filters = filterExpr.split(",").map((f) => f.trim());
 
     for (const filter of filters) {
       // Handle regex matching
@@ -223,9 +233,9 @@ export class MultiStreamJoiner {
       if (regexMatch) {
         const [, field, pattern] = regexMatch;
         const regex = new RegExp(pattern);
-        
+
         // Check if any event matches the filter
-        const hasMatch = correlation.events.some(event => {
+        const hasMatch = correlation.events.some((event) => {
           const value = event.labels[field];
           return value && regex.test(value);
         });
@@ -237,9 +247,9 @@ export class MultiStreamJoiner {
       const exactMatch = filter.match(/(\w+)="([^"]+)"/);
       if (exactMatch) {
         const [, field, value] = exactMatch;
-        
-        const hasMatch = correlation.events.some(event => 
-          event.labels[field] === value
+
+        const hasMatch = correlation.events.some(
+          (event) => event.labels[field] === value,
         );
 
         if (!hasMatch) return false;
@@ -253,11 +263,12 @@ export class MultiStreamJoiner {
     joinValue: string,
     events: LogEvent[],
     matchedStreams: string[],
-    totalStreams: number
+    totalStreams: number,
   ): CorrelatedEvent {
     // Sort events by timestamp
-    events.sort((a, b) => 
-      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    events.sort(
+      (a, b) =>
+        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
     );
 
     const earliestTime = events[0].timestamp;
@@ -268,22 +279,23 @@ export class MultiStreamJoiner {
       timestamp: earliestTime,
       timeWindow: {
         start: earliestTime,
-        end: latestTime
+        end: latestTime,
       },
       joinKey: this.options.joinKeys[0],
       joinValue,
-      events: events.map(e => ({
+      events: events.map((e) => ({
         alias: e.stream,
         source: e.source,
         timestamp: e.timestamp,
         message: e.message,
-        labels: e.labels
+        labels: e.labels,
       })),
       metadata: {
-        completeness: matchedStreams.length === totalStreams ? 'complete' : 'partial',
+        completeness:
+          matchedStreams.length === totalStreams ? "complete" : "partial",
         matchedStreams,
-        totalStreams
-      }
+        totalStreams,
+      },
     };
   }
 }

@@ -5,29 +5,38 @@
  * Handles versioning, npm publishing, and GitHub releases
  */
 
-const { execSync } = require('child_process');
-const fs = require('fs');
-const path = require('path');
-const readline = require('readline');
-const semver = require('semver');
+const { execSync } = require("child_process");
+const fs = require("fs");
+const path = require("path");
+const readline = require("readline");
+const semver = require("semver");
 
-const ROOT_DIR = path.join(__dirname, '..');
+const ROOT_DIR = path.join(__dirname, "..");
 
 // Release configuration
 const RELEASE_CONFIG = {
-  dryRun: process.argv.includes('--dry-run'),
-  skipTests: process.argv.includes('--skip-tests'),
-  skipBuild: process.argv.includes('--skip-build'),
-  prerelease: process.argv.includes('--prerelease'),
-  npm: !process.argv.includes('--no-npm'),
-  github: !process.argv.includes('--no-github'),
-  verbose: process.argv.includes('--verbose')
+  dryRun: process.argv.includes("--dry-run"),
+  skipTests: process.argv.includes("--skip-tests"),
+  skipBuild: process.argv.includes("--skip-build"),
+  prerelease: process.argv.includes("--prerelease"),
+  npm: !process.argv.includes("--no-npm"),
+  github: !process.argv.includes("--no-github"),
+  verbose: process.argv.includes("--verbose"),
 };
 
 // Get release type from arguments
-const RELEASE_TYPE = process.argv.find(arg => 
-  ['major', 'minor', 'patch', 'premajor', 'preminor', 'prepatch', 'prerelease'].includes(arg)
-) || 'patch';
+const RELEASE_TYPE =
+  process.argv.find((arg) =>
+    [
+      "major",
+      "minor",
+      "patch",
+      "premajor",
+      "preminor",
+      "prepatch",
+      "prerelease",
+    ].includes(arg),
+  ) || "patch";
 
 // Logging utilities
 const log = {
@@ -35,19 +44,19 @@ const log = {
   success: (msg) => console.log(`✅ ${msg}`),
   error: (msg) => console.error(`❌ ${msg}`),
   warn: (msg) => console.warn(`⚠️  ${msg}`),
-  verbose: (msg) => RELEASE_CONFIG.verbose && console.log(`   ${msg}`)
+  verbose: (msg) => RELEASE_CONFIG.verbose && console.log(`   ${msg}`),
 };
 
 // Create readline interface for user input
 const rl = readline.createInterface({
   input: process.stdin,
-  output: process.stdout
+  output: process.stdout,
 });
 
 // Prompt user for confirmation
 function prompt(question) {
-  return new Promise(resolve => {
-    rl.question(question, answer => {
+  return new Promise((resolve) => {
+    rl.question(question, (answer) => {
       resolve(answer);
     });
   });
@@ -57,18 +66,18 @@ function prompt(question) {
 function exec(command, options = {}) {
   try {
     log.verbose(`Executing: ${command}`);
-    
-    if (RELEASE_CONFIG.dryRun && command.includes('npm publish')) {
+
+    if (RELEASE_CONFIG.dryRun && command.includes("npm publish")) {
       log.info(`[DRY RUN] Would execute: ${command}`);
-      return '';
+      return "";
     }
-    
+
     const result = execSync(command, {
       cwd: ROOT_DIR,
-      stdio: RELEASE_CONFIG.verbose ? 'inherit' : 'pipe',
-      ...options
+      stdio: RELEASE_CONFIG.verbose ? "inherit" : "pipe",
+      ...options,
     });
-    
+
     return result?.toString().trim();
   } catch (error) {
     log.error(`Command failed: ${command}`);
@@ -82,70 +91,74 @@ function exec(command, options = {}) {
 // Get all packages
 function getPackages() {
   const packages = [];
-  const workspaces = JSON.parse(exec('npm ls --json --depth=0') || '{}');
-  
+  const workspaces = JSON.parse(exec("npm ls --json --depth=0") || "{}");
+
   // Parse workspace packages
   if (workspaces.dependencies) {
     Object.entries(workspaces.dependencies).forEach(([name, info]) => {
-      if (info.resolved?.startsWith('file:')) {
-        const pkgPath = path.join(ROOT_DIR, info.resolved.replace('file:', ''));
-        const pkgJson = JSON.parse(fs.readFileSync(path.join(pkgPath, 'package.json'), 'utf8'));
-        
+      if (info.resolved?.startsWith("file:")) {
+        const pkgPath = path.join(ROOT_DIR, info.resolved.replace("file:", ""));
+        const pkgJson = JSON.parse(
+          fs.readFileSync(path.join(pkgPath, "package.json"), "utf8"),
+        );
+
         packages.push({
           name,
           path: pkgPath,
           version: pkgJson.version,
           json: pkgJson,
-          private: pkgJson.private
+          private: pkgJson.private,
         });
       }
     });
   }
-  
-  return packages.filter(pkg => !pkg.private);
+
+  return packages.filter((pkg) => !pkg.private);
 }
 
 // Check Git status
 function checkGitStatus() {
-  log.info('Checking Git status...');
-  
-  const status = exec('git status --porcelain');
+  log.info("Checking Git status...");
+
+  const status = exec("git status --porcelain");
   if (status) {
-    log.error('Working directory is not clean. Please commit or stash changes.');
+    log.error(
+      "Working directory is not clean. Please commit or stash changes.",
+    );
     console.log(status);
     process.exit(1);
   }
-  
+
   // Check we're on main branch
-  const branch = exec('git branch --show-current');
-  if (branch !== 'main' && !RELEASE_CONFIG.dryRun) {
+  const branch = exec("git branch --show-current");
+  if (branch !== "main" && !RELEASE_CONFIG.dryRun) {
     log.warn(`Not on main branch (current: ${branch})`);
-    
-    if (process.env.CI !== 'true') {
-      const answer = prompt('Continue anyway? (y/N) ');
-      if (answer.toLowerCase() !== 'y') {
+
+    if (process.env.CI !== "true") {
+      const answer = prompt("Continue anyway? (y/N) ");
+      if (answer.toLowerCase() !== "y") {
         process.exit(1);
       }
     }
   }
-  
-  log.success('Git status OK');
+
+  log.success("Git status OK");
 }
 
 // Run tests
 function runTests() {
   if (RELEASE_CONFIG.skipTests) {
-    log.warn('Skipping tests');
+    log.warn("Skipping tests");
     return;
   }
-  
-  log.info('Running tests...');
-  
+
+  log.info("Running tests...");
+
   try {
-    exec('npm test');
-    log.success('Tests passed');
+    exec("npm test");
+    log.success("Tests passed");
   } catch (error) {
-    log.error('Tests failed. Fix issues before releasing.');
+    log.error("Tests failed. Fix issues before releasing.");
     process.exit(1);
   }
 }
@@ -153,17 +166,17 @@ function runTests() {
 // Build packages
 function buildPackages() {
   if (RELEASE_CONFIG.skipBuild) {
-    log.warn('Skipping build');
+    log.warn("Skipping build");
     return;
   }
-  
-  log.info('Building packages...');
-  
+
+  log.info("Building packages...");
+
   try {
-    exec('node tools/build.js --clean --minify');
-    log.success('Build complete');
+    exec("node tools/build.js --clean --minify");
+    log.success("Build complete");
   } catch (error) {
-    log.error('Build failed');
+    log.error("Build failed");
     process.exit(1);
   }
 }
@@ -171,73 +184,75 @@ function buildPackages() {
 // Update package versions
 function updateVersions(packages, newVersion) {
   log.info(`Updating versions to ${newVersion}...`);
-  
-  packages.forEach(pkg => {
-    const pkgJsonPath = path.join(pkg.path, 'package.json');
-    const pkgJson = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf8'));
-    
+
+  packages.forEach((pkg) => {
+    const pkgJsonPath = path.join(pkg.path, "package.json");
+    const pkgJson = JSON.parse(fs.readFileSync(pkgJsonPath, "utf8"));
+
     // Update version
     pkgJson.version = newVersion;
-    
+
     // Update dependencies to other workspace packages
-    ['dependencies', 'devDependencies', 'peerDependencies'].forEach(depType => {
-      if (pkgJson[depType]) {
-        Object.keys(pkgJson[depType]).forEach(dep => {
-          if (packages.find(p => p.name === dep)) {
-            pkgJson[depType][dep] = `^${newVersion}`;
-            log.verbose(`Updated ${dep} in ${pkg.name} ${depType}`);
-          }
-        });
-      }
-    });
-    
+    ["dependencies", "devDependencies", "peerDependencies"].forEach(
+      (depType) => {
+        if (pkgJson[depType]) {
+          Object.keys(pkgJson[depType]).forEach((dep) => {
+            if (packages.find((p) => p.name === dep)) {
+              pkgJson[depType][dep] = `^${newVersion}`;
+              log.verbose(`Updated ${dep} in ${pkg.name} ${depType}`);
+            }
+          });
+        }
+      },
+    );
+
     // Write updated package.json
     if (!RELEASE_CONFIG.dryRun) {
-      fs.writeFileSync(pkgJsonPath, JSON.stringify(pkgJson, null, 2) + '\n');
+      fs.writeFileSync(pkgJsonPath, JSON.stringify(pkgJson, null, 2) + "\n");
     }
-    
+
     log.verbose(`Updated ${pkg.name} to ${newVersion}`);
   });
-  
+
   // Update root package.json
-  const rootPkgPath = path.join(ROOT_DIR, 'package.json');
-  const rootPkg = JSON.parse(fs.readFileSync(rootPkgPath, 'utf8'));
+  const rootPkgPath = path.join(ROOT_DIR, "package.json");
+  const rootPkg = JSON.parse(fs.readFileSync(rootPkgPath, "utf8"));
   rootPkg.version = newVersion;
-  
+
   if (!RELEASE_CONFIG.dryRun) {
-    fs.writeFileSync(rootPkgPath, JSON.stringify(rootPkg, null, 2) + '\n');
+    fs.writeFileSync(rootPkgPath, JSON.stringify(rootPkg, null, 2) + "\n");
   }
-  
+
   log.success(`Updated all packages to ${newVersion}`);
 }
 
 // Generate changelog
 function generateChangelog(version) {
-  log.info('Generating changelog...');
-  
-  const changelogPath = path.join(ROOT_DIR, 'CHANGELOG.md');
-  const date = new Date().toISOString().split('T')[0];
-  
+  log.info("Generating changelog...");
+
+  const changelogPath = path.join(ROOT_DIR, "CHANGELOG.md");
+  const date = new Date().toISOString().split("T")[0];
+
   // Get commit messages since last tag
   let lastTag;
   try {
-    lastTag = exec('git describe --tags --abbrev=0');
+    lastTag = exec("git describe --tags --abbrev=0");
   } catch {
-    lastTag = 'HEAD~20'; // If no tags, use last 20 commits
+    lastTag = "HEAD~20"; // If no tags, use last 20 commits
   }
-  
+
   const commits = exec(`git log ${lastTag}..HEAD --pretty=format:"- %s (%h)"`);
-  
+
   // Parse commits by type
   const changes = {
     breaking: [],
     features: [],
     fixes: [],
-    other: []
+    other: [],
   };
-  
-  commits.split('\n').forEach(commit => {
-    if (commit.includes('BREAKING')) {
+
+  commits.split("\n").forEach((commit) => {
+    if (commit.includes("BREAKING")) {
       changes.breaking.push(commit);
     } else if (commit.match(/^- (feat|feature)/i)) {
       changes.features.push(commit);
@@ -247,232 +262,235 @@ function generateChangelog(version) {
       changes.other.push(commit);
     }
   });
-  
+
   // Build changelog entry
   let entry = `## [${version}] - ${date}\n\n`;
-  
+
   if (changes.breaking.length > 0) {
-    entry += '### ⚠️ Breaking Changes\n';
-    entry += changes.breaking.join('\n') + '\n\n';
+    entry += "### ⚠️ Breaking Changes\n";
+    entry += changes.breaking.join("\n") + "\n\n";
   }
-  
+
   if (changes.features.length > 0) {
-    entry += '### ✨ Features\n';
-    entry += changes.features.join('\n') + '\n\n';
+    entry += "### ✨ Features\n";
+    entry += changes.features.join("\n") + "\n\n";
   }
-  
+
   if (changes.fixes.length > 0) {
-    entry += '### 🐛 Bug Fixes\n';
-    entry += changes.fixes.join('\n') + '\n\n';
+    entry += "### 🐛 Bug Fixes\n";
+    entry += changes.fixes.join("\n") + "\n\n";
   }
-  
+
   if (changes.other.length > 0) {
-    entry += '### 📝 Other Changes\n';
-    entry += changes.other.join('\n') + '\n\n';
+    entry += "### 📝 Other Changes\n";
+    entry += changes.other.join("\n") + "\n\n";
   }
-  
+
   // Update changelog file
   if (fs.existsSync(changelogPath)) {
-    const existingChangelog = fs.readFileSync(changelogPath, 'utf8');
+    const existingChangelog = fs.readFileSync(changelogPath, "utf8");
     const updatedChangelog = existingChangelog.replace(
-      '# Changelog\n',
-      `# Changelog\n\n${entry}`
+      "# Changelog\n",
+      `# Changelog\n\n${entry}`,
     );
-    
+
     if (!RELEASE_CONFIG.dryRun) {
       fs.writeFileSync(changelogPath, updatedChangelog);
     }
   } else {
     const newChangelog = `# Changelog\n\n${entry}`;
-    
+
     if (!RELEASE_CONFIG.dryRun) {
       fs.writeFileSync(changelogPath, newChangelog);
     }
   }
-  
-  log.success('Changelog updated');
+
+  log.success("Changelog updated");
   return entry;
 }
 
 // Commit version changes
 function commitChanges(version) {
-  log.info('Committing changes...');
-  
+  log.info("Committing changes...");
+
   if (RELEASE_CONFIG.dryRun) {
-    log.info('[DRY RUN] Would commit version changes');
+    log.info("[DRY RUN] Would commit version changes");
     return;
   }
-  
-  exec('git add -A');
+
+  exec("git add -A");
   exec(`git commit -m "chore: release v${version}"`);
   exec(`git tag -a v${version} -m "Release v${version}"`);
-  
+
   log.success(`Committed and tagged v${version}`);
 }
 
 // Push to Git
 function pushToGit() {
-  log.info('Pushing to Git...');
-  
+  log.info("Pushing to Git...");
+
   if (RELEASE_CONFIG.dryRun) {
-    log.info('[DRY RUN] Would push to Git');
+    log.info("[DRY RUN] Would push to Git");
     return;
   }
-  
-  exec('git push origin main');
-  exec('git push origin --tags');
-  
-  log.success('Pushed to Git');
+
+  exec("git push origin main");
+  exec("git push origin --tags");
+
+  log.success("Pushed to Git");
 }
 
 // Publish to npm
 async function publishToNpm(packages) {
   if (!RELEASE_CONFIG.npm) {
-    log.warn('Skipping npm publish');
+    log.warn("Skipping npm publish");
     return;
   }
-  
-  log.info('Publishing to npm...');
-  
+
+  log.info("Publishing to npm...");
+
   // Check npm authentication
   try {
-    exec('npm whoami');
+    exec("npm whoami");
   } catch {
     log.error('Not logged in to npm. Run "npm login" first.');
     process.exit(1);
   }
-  
+
   // Publish each package
   for (const pkg of packages) {
     if (pkg.private) {
       log.verbose(`Skipping private package: ${pkg.name}`);
       continue;
     }
-    
+
     log.info(`Publishing ${pkg.name}...`);
-    
+
     const publishCmd = RELEASE_CONFIG.prerelease
       ? `npm publish --tag next`
       : `npm publish`;
-    
+
     try {
       exec(publishCmd, { cwd: pkg.path });
       log.success(`Published ${pkg.name}`);
-      
+
       // Wait a bit between publishes
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
     } catch (error) {
       log.error(`Failed to publish ${pkg.name}`);
       throw error;
     }
   }
-  
-  log.success('All packages published to npm');
+
+  log.success("All packages published to npm");
 }
 
 // Create GitHub release
 function createGitHubRelease(version, changelog) {
   if (!RELEASE_CONFIG.github) {
-    log.warn('Skipping GitHub release');
+    log.warn("Skipping GitHub release");
     return;
   }
-  
-  log.info('Creating GitHub release...');
-  
+
+  log.info("Creating GitHub release...");
+
   if (RELEASE_CONFIG.dryRun) {
-    log.info('[DRY RUN] Would create GitHub release');
+    log.info("[DRY RUN] Would create GitHub release");
     return;
   }
-  
+
   const releaseNotes = changelog
-    .replace(/## \[.*?\] - \d{4}-\d{2}-\d{2}\n/, '') // Remove header
+    .replace(/## \[.*?\] - \d{4}-\d{2}-\d{2}\n/, "") // Remove header
     .trim();
-  
+
   try {
     // Use GitHub CLI if available
-    exec('gh --version', { stdio: 'ignore' });
-    
-    const prerelease = RELEASE_CONFIG.prerelease ? '--prerelease' : '';
-    exec(`gh release create v${version} --title "v${version}" --notes "${releaseNotes}" ${prerelease}`);
-    
-    log.success('GitHub release created');
+    exec("gh --version", { stdio: "ignore" });
+
+    const prerelease = RELEASE_CONFIG.prerelease ? "--prerelease" : "";
+    exec(
+      `gh release create v${version} --title "v${version}" --notes "${releaseNotes}" ${prerelease}`,
+    );
+
+    log.success("GitHub release created");
   } catch {
-    log.warn('GitHub CLI not found. Create release manually at:');
-    console.log(`https://github.com/liquescent/log-correlator/releases/new?tag=v${version}`);
+    log.warn("GitHub CLI not found. Create release manually at:");
+    console.log(
+      `https://github.com/liquescent/log-correlator/releases/new?tag=v${version}`,
+    );
   }
 }
 
 // Main release process
 async function release() {
-  console.log('🚀 Releasing log-correlator packages\n');
-  
+  console.log("🚀 Releasing log-correlator packages\n");
+
   if (RELEASE_CONFIG.dryRun) {
-    log.warn('DRY RUN MODE - No changes will be made');
+    log.warn("DRY RUN MODE - No changes will be made");
   }
-  
+
   try {
     // Check Git status
     checkGitStatus();
-    
+
     // Get packages
     const packages = getPackages();
     if (packages.length === 0) {
-      log.error('No packages found to release');
+      log.error("No packages found to release");
       process.exit(1);
     }
-    
+
     // Get current version
     const currentVersion = packages[0].version;
     log.info(`Current version: ${currentVersion}`);
-    
+
     // Calculate new version
     const newVersion = semver.inc(currentVersion, RELEASE_TYPE);
     log.info(`New version: ${newVersion} (${RELEASE_TYPE})`);
-    
+
     // Confirm release
-    if (!RELEASE_CONFIG.dryRun && process.env.CI !== 'true') {
-      console.log('\nPackages to release:');
-      packages.forEach(pkg => console.log(`  - ${pkg.name}`));
-      
+    if (!RELEASE_CONFIG.dryRun && process.env.CI !== "true") {
+      console.log("\nPackages to release:");
+      packages.forEach((pkg) => console.log(`  - ${pkg.name}`));
+
       const answer = await prompt(`\nRelease v${newVersion}? (y/N) `);
-      if (answer.toLowerCase() !== 'y') {
-        log.info('Release cancelled');
+      if (answer.toLowerCase() !== "y") {
+        log.info("Release cancelled");
         process.exit(0);
       }
     }
-    
+
     // Run tests
     runTests();
-    
+
     // Build packages
     buildPackages();
-    
+
     // Update versions
     updateVersions(packages, newVersion);
-    
+
     // Generate changelog
     const changelog = generateChangelog(newVersion);
-    
+
     // Commit changes
     commitChanges(newVersion);
-    
+
     // Push to Git
     pushToGit();
-    
+
     // Publish to npm
     await publishToNpm(packages);
-    
+
     // Create GitHub release
     createGitHubRelease(newVersion, changelog);
-    
+
     console.log(`\n✨ Successfully released v${newVersion}`);
-    
+
     if (RELEASE_CONFIG.dryRun) {
-      console.log('\n📝 This was a dry run. No changes were made.');
+      console.log("\n📝 This was a dry run. No changes were made.");
     }
-    
   } catch (error) {
-    log.error('Release failed');
+    log.error("Release failed");
     console.error(error);
     process.exit(1);
   } finally {
@@ -483,7 +501,7 @@ async function release() {
 // Handle CLI
 if (require.main === module) {
   // Show help
-  if (process.argv.includes('--help')) {
+  if (process.argv.includes("--help")) {
     console.log(`
 Log Correlator Release Script
 
@@ -516,15 +534,15 @@ Examples:
     `);
     process.exit(0);
   }
-  
+
   // Check for required dependencies
   try {
-    require('semver');
+    require("semver");
   } catch {
-    log.error('Missing dependency. Run: npm install semver');
+    log.error("Missing dependency. Run: npm install semver");
     process.exit(1);
   }
-  
+
   // Run release
   release();
 }

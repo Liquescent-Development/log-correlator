@@ -22,29 +22,32 @@ npm install @liquescent/log-correlator-graylog  # Optional: Graylog adapter
 ## Quick Start
 
 ```javascript
-const { CorrelationEngine } = require('@liquescent/log-correlator-core')
-const { LokiAdapter } = require('@liquescent/log-correlator-loki')
+const { CorrelationEngine } = require("@liquescent/log-correlator-core");
+const { LokiAdapter } = require("@liquescent/log-correlator-loki");
 
 const engine = new CorrelationEngine({
-  timeWindow: 30000,      // 30 second window
-  maxEvents: 10000        // Memory limit
-})
+  timeWindow: 30000, // 30 second window
+  maxEvents: 10000, // Memory limit
+});
 
 // Add data source adapter
-engine.addAdapter('loki', new LokiAdapter({
-  url: 'http://localhost:3100'
-}))
+engine.addAdapter(
+  "loki",
+  new LokiAdapter({
+    url: "http://localhost:3100",
+  }),
+);
 
 // Execute correlation query
 const query = `
   loki({service="frontend"})[5m] 
     and on(request_id) 
     loki({service="backend"})[5m]
-`
+`;
 
 // Stream results
 for await (const correlation of engine.correlate(query)) {
-  console.log('Correlated events:', correlation)
+  console.log("Correlated events:", correlation);
 }
 ```
 
@@ -53,23 +56,26 @@ for await (const correlation of engine.correlate(query)) {
 The package supports a PromQL-inspired syntax for correlating log streams:
 
 ### Basic Join
+
 ```promql
-loki({service="frontend"})[5m] 
-  and on(request_id) 
+loki({service="frontend"})[5m]
+  and on(request_id)
   loki({service="backend"})[5m]
 ```
 
 ### Cross-Source Correlation
+
 ```promql
-loki({job="nginx"})[5m] 
-  and on(request_id) 
+loki({job="nginx"})[5m]
+  and on(request_id)
   graylog(service:api)[5m]
 ```
 
 ### Temporal Join
+
 ```promql
-loki({service="frontend"})[5m] 
-  and on(request_id) within(30s) 
+loki({service="frontend"})[5m]
+  and on(request_id) within(30s)
   loki({service="backend"})[5m]
 ```
 

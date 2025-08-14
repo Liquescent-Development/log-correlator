@@ -59,6 +59,7 @@ npm run clean
 ### Query Language
 
 PromQL-inspired syntax supporting:
+
 - Inner joins: `and on(key)`
 - Left joins: `or on(key)`
 - Anti-joins: `unless on(key)`
@@ -66,9 +67,10 @@ PromQL-inspired syntax supporting:
 - Grouping: `group_left()`, `group_right()`
 
 Example:
+
 ```promql
-loki({service="frontend"})[5m] 
-  and on(request_id) 
+loki({service="frontend"})[5m]
+  and on(request_id)
   loki({service="backend"})[5m]
 ```
 

@@ -24,7 +24,7 @@ export interface CorrelatedEvent {
     labels: Record<string, string>;
   }>;
   metadata: {
-    completeness: 'complete' | 'partial';
+    completeness: "complete" | "partial";
     matchedStreams: string[];
     totalStreams: number;
   };
@@ -35,7 +35,7 @@ export interface CorrelationEngineOptions {
   timeWindow?: number;
   maxEvents?: number;
   lateTolerance?: string | number;
-  joinType?: 'inner' | 'left' | 'outer';
+  joinType?: "inner" | "left" | "outer";
   bufferSize?: number;
   processingInterval?: string | number;
   maxMemoryMB?: number;
@@ -62,9 +62,8 @@ export class CorrelationError extends Error {
 
   constructor(message: string, code: string, details?: unknown) {
     super(message);
-    this.name = 'CorrelationError';
+    this.name = "CorrelationError";
     this.code = code;
     this.details = details;
   }
 }
-

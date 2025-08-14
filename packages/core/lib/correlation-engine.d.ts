@@ -1,5 +1,9 @@
-import { EventEmitter } from 'eventemitter3';
-import { CorrelationEngineOptions, DataSourceAdapter, CorrelatedEvent } from './types';
+import { EventEmitter } from "eventemitter3";
+import {
+  CorrelationEngineOptions,
+  DataSourceAdapter,
+  CorrelatedEvent,
+} from "./types";
 /**
  * Main correlation engine for real-time log stream processing
  * @extends EventEmitter
@@ -16,23 +20,23 @@ import { CorrelationEngineOptions, DataSourceAdapter, CorrelatedEvent } from './
  * ```
  */
 export declare class CorrelationEngine extends EventEmitter {
-    private adapters;
-    private options;
-    private activeJoiners;
-    private performanceMonitor;
-    private backpressureController?;
-    private queryParser;
-    private gcInterval?;
-    constructor(options?: CorrelationEngineOptions);
-    addAdapter(name: string, adapter: DataSourceAdapter): void;
-    getAdapter(name: string): DataSourceAdapter | undefined;
-    correlate(query: string): AsyncGenerator<CorrelatedEvent>;
-    validateQuery(query: string): boolean;
-    private parseQuery;
-    private validateParsedQuery;
-    private instrumentStream;
-    private getAdapterForSource;
-    private startGarbageCollection;
-    destroy(): Promise<void>;
+  private adapters;
+  private options;
+  private activeJoiners;
+  private performanceMonitor;
+  private backpressureController?;
+  private queryParser;
+  private gcInterval?;
+  constructor(options?: CorrelationEngineOptions);
+  addAdapter(name: string, adapter: DataSourceAdapter): void;
+  getAdapter(name: string): DataSourceAdapter | undefined;
+  correlate(query: string): AsyncGenerator<CorrelatedEvent>;
+  validateQuery(query: string): boolean;
+  private parseQuery;
+  private validateParsedQuery;
+  private instrumentStream;
+  private getAdapterForSource;
+  private startGarbageCollection;
+  destroy(): Promise<void>;
 }
 //# sourceMappingURL=correlation-engine.d.ts.map

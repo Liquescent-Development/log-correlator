@@ -23,6 +23,7 @@ node tools/build.js --verbose
 ```
 
 Options:
+
 - `--clean` - Clean build artifacts before building
 - `--minify` - Generate minified versions
 - `--no-sourcemaps` - Disable source map generation
@@ -51,6 +52,7 @@ node tools/release.js prerelease --prerelease
 ```
 
 Options:
+
 - Version types: `major`, `minor`, `patch`, `premajor`, `preminor`, `prepatch`, `prerelease`
 - `--dry-run` - Run without making changes
 - `--skip-tests` - Skip running tests
@@ -81,11 +83,13 @@ node tools/benchmark.js complex --output report.json
 ```
 
 Scenarios:
+
 - `simple` - Basic two-stream correlation
 - `complex` - Multi-stream correlation with filters
 - `throughput` - High-throughput parallel queries
 
 Options:
+
 - `--duration <ms>` - Test duration (default: 60000)
 - `--events <n>` - Events per second (default: 1000)
 - `--window <size>` - Time window size (default: 5m)
@@ -112,6 +116,7 @@ node tools/load-test.js --duration 60000 --report
 ```
 
 Options:
+
 - `--workers <n>` - Number of worker processes (default: CPU cores)
 - `--duration <ms>` - Test duration (default: 300000)
 - `--rps <n>` - Target requests per second (default: 1000)
@@ -138,6 +143,7 @@ node tools/changelog.js --dry-run --unreleased
 ```
 
 Options:
+
 - `--unreleased` - Generate only unreleased changes
 - `--all` - Generate complete changelog
 - `--from=<ref>` - Generate from specific ref/tag
@@ -162,6 +168,7 @@ node tools/dev.js --verbose
 ```
 
 Options:
+
 - `--no-watch` - Disable file watching
 - `--test` - Enable test runner in watch mode
 - `--lint` - Enable linting on file changes
@@ -169,6 +176,7 @@ Options:
 - `--verbose` - Show detailed output
 
 Keyboard commands during execution:
+
 - `r` - Restart all processes
 - `t` - Run tests
 - `l` - Run linter

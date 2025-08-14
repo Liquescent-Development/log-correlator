@@ -46,20 +46,20 @@ When using log-correlator in production:
 Always validate and sanitize log queries before processing:
 
 ```javascript
-const { CorrelationEngine } = require('@liquescent/log-correlator-core');
+const { CorrelationEngine } = require("@liquescent/log-correlator-core");
 
 // Validate query before execution
 function safeCorrelate(engine, userQuery) {
   // Sanitize user input
   const sanitized = userQuery
-    .replace(/[;<>]/g, '') // Remove potential injection characters
-    .slice(0, 1000);       // Limit query length
-  
+    .replace(/[;<>]/g, "") // Remove potential injection characters
+    .slice(0, 1000); // Limit query length
+
   // Validate query syntax
   if (!engine.validateQuery(sanitized)) {
-    throw new Error('Invalid query syntax');
+    throw new Error("Invalid query syntax");
   }
-  
+
   return engine.correlate(sanitized);
 }
 ```
@@ -70,10 +70,10 @@ Set appropriate resource limits to prevent DoS:
 
 ```javascript
 const engine = new CorrelationEngine({
-  maxEvents: 1000,        // Limit events in memory
-  maxMemoryMB: 50,        // Memory limit
-  timeout: 30000,         // Query timeout
-  bufferSize: 100         // Small buffer to limit resource usage
+  maxEvents: 1000, // Limit events in memory
+  maxMemoryMB: 50, // Memory limit
+  timeout: 30000, // Query timeout
+  bufferSize: 100, // Small buffer to limit resource usage
 });
 ```
 
@@ -85,16 +85,16 @@ Always implement proper authentication for data sources:
 // Use authentication tokens
 const lokiAdapter = new LokiAdapter({
   url: process.env.LOKI_URL,
-  authToken: process.env.LOKI_AUTH_TOKEN,  // Keep tokens in env vars
+  authToken: process.env.LOKI_AUTH_TOKEN, // Keep tokens in env vars
   headers: {
-    'X-Scope-OrgID': process.env.ORG_ID
-  }
+    "X-Scope-OrgID": process.env.ORG_ID,
+  },
 });
 
 // Never commit credentials
 const graylogAdapter = new GraylogAdapter({
   url: process.env.GRAYLOG_URL,
-  apiToken: process.env.GRAYLOG_API_TOKEN  // Use API tokens over passwords
+  apiToken: process.env.GRAYLOG_API_TOKEN, // Use API tokens over passwords
 });
 ```
 
@@ -104,9 +104,9 @@ Use HTTPS/TLS for all connections:
 
 ```javascript
 const adapter = new LokiAdapter({
-  url: 'https://loki.example.com',  // Always use HTTPS
-  rejectUnauthorized: true,         // Verify SSL certificates
-  timeout: 10000                     // Set reasonable timeouts
+  url: "https://loki.example.com", // Always use HTTPS
+  rejectUnauthorized: true, // Verify SSL certificates
+  timeout: 10000, // Set reasonable timeouts
 });
 ```
 
@@ -115,23 +115,23 @@ const adapter = new LokiAdapter({
 Implement security logging:
 
 ```javascript
-engine.on('error', (error) => {
+engine.on("error", (error) => {
   // Log security-relevant errors
-  if (error.code === 'UNAUTHORIZED' || error.code === 'FORBIDDEN') {
-    logger.security('Authentication failure', {
+  if (error.code === "UNAUTHORIZED" || error.code === "FORBIDDEN") {
+    logger.security("Authentication failure", {
       timestamp: new Date(),
       error: error.message,
-      source: error.source
+      source: error.source,
     });
   }
 });
 
 // Monitor for suspicious patterns
-engine.on('correlationFound', (correlation) => {
+engine.on("correlationFound", (correlation) => {
   if (correlation.events.length > 1000) {
-    logger.warn('Large correlation detected', {
+    logger.warn("Large correlation detected", {
       correlationId: correlation.correlationId,
-      eventCount: correlation.events.length
+      eventCount: correlation.events.length,
     });
   }
 });
@@ -170,6 +170,7 @@ npm audit fix --force
 ## Security Updates
 
 Security updates will be released as:
+
 - **PATCH** version for low to medium severity issues
 - **MINOR** version for high severity issues that require API changes
 - **MAJOR** version only if breaking changes are absolutely necessary

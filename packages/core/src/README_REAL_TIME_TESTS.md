@@ -51,6 +51,7 @@ Comprehensive performance validation for streaming scenarios:
 - **Backpressure handling**: Simulates slow consumers to test graceful degradation under pressure
 
 **Performance Expectations**:
+
 - High-frequency tests complete within 5 seconds
 - Memory usage remains bounded within configured limits
 - No event loss under backpressure conditions
@@ -99,8 +100,14 @@ Tests use configurable delays to simulate realistic streaming patterns:
 
 ```typescript
 const leftEvents = [
-  { item: createTestEvent('2025-08-13T10:00:00Z', {}, { request_id: 'req1' }), delay: 10 },
-  { item: createTestEvent('2025-08-13T10:00:02Z', {}, { request_id: 'req2' }), delay: 100 }
+  {
+    item: createTestEvent("2025-08-13T10:00:00Z", {}, { request_id: "req1" }),
+    delay: 10,
+  },
+  {
+    item: createTestEvent("2025-08-13T10:00:02Z", {}, { request_id: "req2" }),
+    delay: 100,
+  },
 ];
 ```
 
@@ -109,7 +116,11 @@ const leftEvents = [
 Tests measure correlation emission timing to validate real-time behavior:
 
 ```typescript
-const results = await collectCorrelationsWithTiming(joiner, leftStream, rightStream);
+const results = await collectCorrelationsWithTiming(
+  joiner,
+  leftStream,
+  rightStream,
+);
 expect(results[0].receivedAt).toBeLessThan(100); // Should emit quickly
 ```
 
@@ -119,8 +130,12 @@ Tests validate behavior under concurrent stream processing:
 
 ```typescript
 // Simulate interleaved events from different streams
-const leftEvents = [/* events with varying delays */];
-const rightEvents = [/* events with different timing */];
+const leftEvents = [
+  /* events with varying delays */
+];
+const rightEvents = [
+  /* events with different timing */
+];
 ```
 
 ## Benefits

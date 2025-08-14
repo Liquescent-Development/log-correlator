@@ -1,35 +1,41 @@
 // Basic correlation example - vanilla JavaScript
-const { CorrelationEngine } = require('@liquescent/log-correlator-core');
-const { LokiAdapter } = require('@liquescent/log-correlator-loki');
-const { GraylogAdapter } = require('@liquescent/log-correlator-graylog');
+const { CorrelationEngine } = require("@liquescent/log-correlator-core");
+const { LokiAdapter } = require("@liquescent/log-correlator-loki");
+const { GraylogAdapter } = require("@liquescent/log-correlator-graylog");
 
 async function main() {
   // Create correlation engine with simple configuration
   const engine = new CorrelationEngine({
-    timeWindow: 30000,      // 30 second window
-    maxEvents: 10000,       // Memory limit
-    lateTolerance: 5000     // 5 second late arrival tolerance
+    timeWindow: 30000, // 30 second window
+    maxEvents: 10000, // Memory limit
+    lateTolerance: 5000, // 5 second late arrival tolerance
   });
 
   // Add Loki adapter
-  engine.addAdapter('loki', new LokiAdapter({
-    url: 'http://localhost:3100',
-    websocket: false,  // Use polling for this example
-    pollInterval: 1000
-  }));
+  engine.addAdapter(
+    "loki",
+    new LokiAdapter({
+      url: "http://localhost:3100",
+      websocket: false, // Use polling for this example
+      pollInterval: 1000,
+    }),
+  );
 
   // Add Graylog adapter
-  engine.addAdapter('graylog', new GraylogAdapter({
-    url: 'http://localhost:9000',
-    username: 'admin',
-    password: 'admin',
-    pollInterval: 2000
-  }));
+  engine.addAdapter(
+    "graylog",
+    new GraylogAdapter({
+      url: "http://localhost:9000",
+      username: "admin",
+      password: "admin",
+      pollInterval: 2000,
+    }),
+  );
 
   // Example 1: Basic inner join
-  console.log('Example 1: Basic Inner Join');
-  console.log('----------------------------');
-  
+  console.log("Example 1: Basic Inner Join");
+  console.log("----------------------------");
+
   const query1 = `
     loki({service="frontend"})[5m] 
       and on(request_id) 
@@ -40,20 +46,22 @@ async function main() {
     for await (const correlation of engine.correlate(query1)) {
       console.log(`Found correlation for request_id: ${correlation.joinValue}`);
       console.log(`  Total events: ${correlation.events.length}`);
-      
-      correlation.events.forEach(event => {
-        console.log(`    [${event.source}] ${event.timestamp}: ${event.message}`);
+
+      correlation.events.forEach((event) => {
+        console.log(
+          `    [${event.source}] ${event.timestamp}: ${event.message}`,
+        );
       });
-      console.log('');
+      console.log("");
     }
   } catch (error) {
-    console.error('Correlation failed:', error);
+    console.error("Correlation failed:", error);
   }
 
   // Example 2: Cross-source correlation
-  console.log('\nExample 2: Cross-Source Correlation');
-  console.log('------------------------------------');
-  
+  console.log("\nExample 2: Cross-Source Correlation");
+  console.log("------------------------------------");
+
   const query2 = `
     loki({job="nginx"})[5m] 
       and on(request_id) 
@@ -65,17 +73,19 @@ async function main() {
       console.log(`Cross-source correlation found:`);
       console.log(`  Join key: ${correlation.joinKey}`);
       console.log(`  Join value: ${correlation.joinValue}`);
-      console.log(`  Sources: ${correlation.metadata.matchedStreams.join(', ')}`);
-      console.log('');
+      console.log(
+        `  Sources: ${correlation.metadata.matchedStreams.join(", ")}`,
+      );
+      console.log("");
     }
   } catch (error) {
-    console.error('Cross-source correlation failed:', error);
+    console.error("Cross-source correlation failed:", error);
   }
 
   // Example 3: Left join (all frontend events, backend if available)
-  console.log('\nExample 3: Left Join');
-  console.log('--------------------');
-  
+  console.log("\nExample 3: Left Join");
+  console.log("--------------------");
+
   const query3 = `
     loki({service="frontend"})[5m] 
       or on(request_id) 
@@ -87,7 +97,7 @@ async function main() {
     let partialCount = 0;
 
     for await (const correlation of engine.correlate(query3)) {
-      if (correlation.metadata.completeness === 'complete') {
+      if (correlation.metadata.completeness === "complete") {
         completeCount++;
       } else {
         partialCount++;
@@ -97,12 +107,12 @@ async function main() {
     console.log(`  Complete correlations: ${completeCount}`);
     console.log(`  Partial correlations: ${partialCount}`);
   } catch (error) {
-    console.error('Left join failed:', error);
+    console.error("Left join failed:", error);
   }
 
   // Clean up
   await engine.destroy();
-  console.log('\nEngine destroyed successfully');
+  console.log("\nEngine destroyed successfully");
 }
 
 // Run the example
