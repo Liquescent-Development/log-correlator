@@ -251,7 +251,7 @@ export class GraylogAdapter implements DataSourceAdapter {
 
     while (i < query.length) {
       // Look for field="value" or field='value' patterns
-      let fieldStart = i;
+      const fieldStart = i;
       // Check for word characters without regex
       while (
         i < query.length &&
