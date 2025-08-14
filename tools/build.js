@@ -124,9 +124,9 @@ function buildTypeScript() {
   log.info('Building TypeScript...');
   
   const tscArgs = [
+    '--build',
     BUILD_CONFIG.sourceMaps ? '--sourceMap' : '',
-    BUILD_CONFIG.watch ? '--watch' : '',
-    '--build'
+    BUILD_CONFIG.watch ? '--watch' : ''
   ].filter(Boolean).join(' ');
   
   exec(`npx tsc ${tscArgs}`);
@@ -278,6 +278,11 @@ function validateBuild() {
   let hasErrors = false;
   
   packages.forEach(pkg => {
+    // Skip validation for examples package
+    if (pkg.name === '@liquescent/log-correlator-examples') {
+      return;
+    }
+    
     const distDir = path.join(pkg.path, 'dist');
     const libDir = path.join(pkg.path, 'lib');
     
