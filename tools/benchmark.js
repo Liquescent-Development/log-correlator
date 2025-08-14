@@ -158,7 +158,7 @@ class MetricsCollector {
     }
   }
   
-  recordError(error) {
+  recordError(_error) {
     this.metrics.errors++;
   }
   

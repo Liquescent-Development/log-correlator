@@ -102,13 +102,6 @@ function runLint() {
   spawnProcess('eslint', 'npx', ['eslint', '.', '--ext', '.ts,.js']);
 }
 
-// Run type checking
-function runTypeCheck() {
-  if (!CONFIG.typecheck) return;
-  
-  log.info('Running type checker...');
-  spawnProcess('typecheck', 'npx', ['tsc', '--noEmit']);
-}
 
 // File watcher setup
 function setupWatcher() {

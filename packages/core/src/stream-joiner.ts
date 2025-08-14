@@ -201,7 +201,7 @@ export class StreamJoiner {
     for (const [key, firstArrival] of eventArrivalTimes) {
       if (arrivalTime - firstArrival > this.options.lateTolerance) {
         // Check if this event would correlate with the early event
-        const [_side, joinKey] = key.split(':');
+        const [, joinKey] = key.split(':');
         const eventJoinKey = this.extractJoinKey(event);
         if (eventJoinKey === joinKey) {
           return true; // Event is too late

@@ -202,7 +202,7 @@ describe('CorrelationEngine Integration', () => {
 
       // Start correlation to trigger metrics
       const iterator = engine.correlate(query);
-      const _result = await iterator.next();
+      await iterator.next();
       
       // Close the iterator to clean up resources
       if (iterator.return) {

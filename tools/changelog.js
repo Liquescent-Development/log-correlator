@@ -26,23 +26,6 @@ const CONFIG = {
   template: process.argv.find(arg => arg.startsWith('--template='))?.split('=')[1]
 };
 
-// Commit type mappings
-const COMMIT_TYPES = {
-  feat: { title: '✨ Features', emoji: '✨' },
-  feature: { title: '✨ Features', emoji: '✨' },
-  fix: { title: '🐛 Bug Fixes', emoji: '🐛' },
-  bugfix: { title: '🐛 Bug Fixes', emoji: '🐛' },
-  perf: { title: '⚡ Performance', emoji: '⚡' },
-  refactor: { title: '♻️ Refactoring', emoji: '♻️' },
-  docs: { title: '📝 Documentation', emoji: '📝' },
-  test: { title: '✅ Tests', emoji: '✅' },
-  build: { title: '📦 Build', emoji: '📦' },
-  ci: { title: '👷 CI/CD', emoji: '👷' },
-  chore: { title: '🔧 Maintenance', emoji: '🔧' },
-  style: { title: '💄 Style', emoji: '💄' },
-  revert: { title: '⏪ Reverts', emoji: '⏪' },
-  deps: { title: '📌 Dependencies', emoji: '📌' }
-};
 
 // Logging utilities
 const log = {
@@ -408,28 +391,6 @@ function getRepoUrl() {
   }
 }
 
-// Update existing changelog
-function updateChangelog(content) {
-  if (fs.existsSync(CONFIG.output)) {
-    const existing = fs.readFileSync(CONFIG.output, 'utf8');
-    
-    // Find where to insert new content
-    const unreleasedIndex = existing.indexOf('## [Unreleased]');
-    
-    if (unreleasedIndex !== -1) {
-      // Replace unreleased section
-      const nextSectionIndex = existing.indexOf('\n## [', unreleasedIndex + 1);
-      
-      if (nextSectionIndex !== -1) {
-        const before = existing.substring(0, unreleasedIndex);
-        const after = existing.substring(nextSectionIndex);
-        return before + content + after;
-      }
-    }
-  }
-  
-  return content;
-}
 
 // Suggest next version based on commits
 function suggestVersion(commits) {

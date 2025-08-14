@@ -117,7 +117,6 @@ export class QueryParser {
     while ((match = joinOperatorPattern.exec(query)) !== null) {
       const joinType = match[1].toLowerCase() as JoinType;
       const joinKeysRaw = match[2];
-      const joinStart = match.index;
       const joinEnd = match.index + match[0].length;
       
       // Parse join keys and label mappings

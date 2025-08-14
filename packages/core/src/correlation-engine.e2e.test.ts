@@ -536,7 +536,8 @@ describe('Log Correlator End-to-End Tests', () => {
         expect(engine.validateQuery(query)).toBe(false);
         
         await expect(async () => {
-          for await (const _correlation of engine.correlate(query)) {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          for await (const _ of engine.correlate(query)) {
             // Should not yield any results
           }
         }).rejects.toThrow();
@@ -663,7 +664,8 @@ describe('Log Correlator End-to-End Tests', () => {
       const query = `nonexistent({service="test"})[5m] and on(id) nonexistent({service="test"})[5m]`;
 
       await expect(async () => {
-        for await (const _correlation of engine.correlate(query)) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        for await (const _ of engine.correlate(query)) {
           // Should not reach here
         }
       }).rejects.toThrow('Required data source adapter not found');
