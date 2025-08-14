@@ -146,7 +146,7 @@ const pollingAdapter = new LokiAdapter({
 // 3. Add authentication for secured Loki
 const authenticatedAdapter = new LokiAdapter({
   url: "https://loki.example.com",
-  authToken: "Bearer YOUR_TOKEN",
+  authToken: "Bearer <YOUR_API_TOKEN>",
   headers: {
     "X-Scope-OrgID": "your-org-id",
   },
@@ -175,8 +175,8 @@ try {
 
 ```bash
 # Test Graylog API access
-curl -u admin:password http://localhost:9000/api/system
-curl -H "Authorization: Bearer YOUR_TOKEN" http://localhost:9000/api/streams
+curl -u <USERNAME>:<PASSWORD> http://localhost:9000/api/system
+curl -H "Authorization: Bearer <YOUR_API_TOKEN>" http://localhost:9000/api/streams
 ```
 
 **Solutions**:
@@ -189,7 +189,7 @@ const {
 // 1. Use API token (recommended)
 const graylogAdapter = new GraylogAdapter({
   url: "http://localhost:9000",
-  apiToken: "your-api-token", // Create in Graylog System > Users
+  apiToken: "<YOUR_API_TOKEN>", // Create in Graylog System > Users
   timeout: 15000,
   maxRetries: 3,
 });
@@ -197,15 +197,15 @@ const graylogAdapter = new GraylogAdapter({
 // 2. Use username/password authentication
 const basicAuthAdapter = new GraylogAdapter({
   url: "http://localhost:9000",
-  username: "admin",
-  password: "password",
+  username: "<YOUR_USERNAME>",
+  password: "<YOUR_PASSWORD>",
   pollInterval: 5000,
 });
 
 // 3. Configure for specific stream
 const streamAdapter = new GraylogAdapter({
   url: "http://localhost:9000",
-  apiToken: "your-token",
+  apiToken: "<YOUR_API_TOKEN>",
   streamId: "507f1f77bcf86cd799439011", // Limit to specific stream
 });
 
@@ -733,7 +733,7 @@ const {
 // 1. Test query conversion
 const adapter = new GraylogAdapter({
   url: "http://localhost:9000",
-  apiToken: "your-token",
+  apiToken: "<YOUR_API_TOKEN>",
 });
 
 // Debug internal query conversion
