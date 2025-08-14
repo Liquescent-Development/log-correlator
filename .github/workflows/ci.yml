@@ -134,6 +134,10 @@ jobs:
           # Check that dist directories exist
           for pkg in packages/*/; do
             if [ -f "$pkg/package.json" ]; then
+              # Skip examples package as it doesn't need build output
+              if [[ "$pkg" == *"examples"* ]]; then
+                continue
+              fi
               if [ ! -d "$pkg/dist" ] && [ ! -d "$pkg/lib" ]; then
                 echo "Missing build output for $pkg"
                 exit 1
