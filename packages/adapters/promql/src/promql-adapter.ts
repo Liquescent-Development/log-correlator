@@ -177,6 +177,26 @@ export class PromQLAdapter implements DataSourceAdapter {
   private transformMetricsToEvents(response: PrometheusQueryResponse, limit: number): LogEvent[] {
     const events: LogEvent[] = [];
     
+    // Handle scalar and string result types
+    if (response.data.resultType === 'scalar' || response.data.resultType === 'string') {
+      const [timestamp, val] = response.data.result as any;
+      const isoTimestamp = new Date(timestamp * 1000).toISOString();
+      
+      const event: LogEvent = {
+        timestamp: isoTimestamp,
+        source: 'promql',
+        message: `metric=${val}`,
+        labels: {
+          __value__: val
+        },
+        joinKeys: {}
+      };
+      
+      events.push(event);
+      return events;
+    }
+    
+    // Handle matrix and vector result types
     for (const series of response.data.result) {
       const { metric, values = [], value } = series;
       
@@ -238,9 +258,22 @@ export class PromQLAdapter implements DataSourceAdapter {
   validateQuery(query: string): boolean {
     // Basic validation - check for valid PromQL syntax
     try {
+      // Empty queries are invalid
+      if (!query || query.trim() === '') {
+        return false;
+      }
+      
       // Check for basic metric name or selector
-      const selectorMatch = query.match(/^([a-zA-Z_:][a-zA-Z0-9_:]*)?\s*(\{[^}]*\})?$/);
-      return !!selectorMatch;
+      // Either: metric_name{labels} or just {labels} or just metric_name
+      // Metric names can contain letters, digits, underscore, and colon
+      // They must start with letter, underscore or colon
+      const metricNamePattern = /^[a-zA-Z_:][a-zA-Z0-9_:]*$/;
+      const metricWithLabelsPattern = /^[a-zA-Z_:][a-zA-Z0-9_:]*\{[^}]*\}$/;
+      const labelsOnlyPattern = /^\{[^}]+\}$/;
+      
+      return metricNamePattern.test(query) || 
+             metricWithLabelsPattern.test(query) || 
+             labelsOnlyPattern.test(query);
     } catch {
       return false;
     }
