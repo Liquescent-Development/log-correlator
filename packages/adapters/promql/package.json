@@ -1,6 +1,6 @@
 {
   "name": "@liquescent/log-correlator-promql",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "PromQL adapter for log-correlator",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -10,7 +10,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@liquescent/log-correlator-core": "^1.0.0",
+    "@liquescent/log-correlator-core": "^0.0.1",
     "node-fetch": "^2.6.7"
   },
   "devDependencies": {

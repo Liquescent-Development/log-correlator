@@ -1,6 +1,6 @@
 {
   "name": "@liquescent/log-correlator-graylog",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "Graylog adapter for log-correlator",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -17,7 +17,7 @@
   "author": "",
   "license": "AGPL-3.0",
   "dependencies": {
-    "@liquescent/log-correlator-core": "^1.0.0",
+    "@liquescent/log-correlator-core": "^0.0.1",
     "node-fetch": "^2.7.0"
   },
   "devDependencies": {
