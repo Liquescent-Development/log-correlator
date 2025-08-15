@@ -34,8 +34,9 @@ git push && git push --tags
 ## Version Management
 
 This project uses semantic versioning:
+
 - `0.0.x` - Initial development, unstable API
-- `0.x.x` - Pre-release, breaking changes expected  
+- `0.x.x` - Pre-release, breaking changes expected
 - `1.0.0` - First stable release with public API commitment
 
 Current version: `0.0.1` (initial development)
@@ -59,17 +60,20 @@ npm run publish:all
 ### Option 2: GitHub Packages
 
 1. Create a `.npmrc` file in the project root:
+
 ```
 @liquescent:registry=https://npm.pkg.github.com
 //npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}
 ```
 
 2. Set your GitHub token:
+
 ```bash
 export GITHUB_TOKEN=your_github_personal_access_token
 ```
 
 3. Publish:
+
 ```bash
 npm run build
 npm run publish:all
@@ -78,6 +82,7 @@ npm run publish:all
 ### Option 3: Private Registry
 
 Configure your private registry in `.npmrc`:
+
 ```
 @liquescent:registry=https://your-registry.com
 //your-registry.com/:_authToken=${AUTH_TOKEN}
@@ -106,6 +111,7 @@ Configure your private registry in `.npmrc`:
 ### Subsequent Releases
 
 1. **Update versions** using the release tool:
+
    ```bash
    node tools/release.js patch  # for 0.0.1 -> 0.0.2
    node tools/release.js minor  # for 0.0.1 -> 0.1.0
@@ -113,6 +119,7 @@ Configure your private registry in `.npmrc`:
    ```
 
 2. **Build and test**:
+
    ```bash
    npm run build
    npm test
@@ -126,6 +133,7 @@ Configure your private registry in `.npmrc`:
 ## Automating Publication
 
 The repository includes a GitHub Action for automated releases:
+
 - Trigger manually via GitHub Actions UI
 - Or push a tag: `git tag v0.0.1 && git push --tags`
 
@@ -150,23 +158,28 @@ node -e "const { CorrelationEngine } = require('@liquescent/log-correlator-core'
 ## Troubleshooting
 
 ### "402 Payment Required" Error
+
 - npm requires payment for private scoped packages
 - Either make packages public with `--access public` or use GitHub Packages
 
-### "E403 Forbidden" Error  
+### "E403 Forbidden" Error
+
 - Not authenticated or lacking permissions
 - Run `npm login` and ensure you have access to the scope
 
 ### "E404 Not Found" Error for Dependencies
+
 - Dependencies not yet published
 - Ensure you publish packages in the correct order (query-parser first, then core, then adapters)
 
 ## Package Visibility
 
 For open source (AGPLv3 licensed):
+
 - Use `--access public` when publishing to npm
 - Packages will be freely available to everyone
 
 For private/commercial use:
+
 - Use GitHub Packages or private npm registry
 - Configure authentication as described above

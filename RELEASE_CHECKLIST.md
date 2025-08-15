@@ -13,6 +13,7 @@
 ## Release Process
 
 ### Option 1: Quick Release (Recommended)
+
 ```bash
 # For patch release (0.0.1 -> 0.0.2)
 npm run release:patch
@@ -28,6 +29,7 @@ git push && git push --tags
 ```
 
 ### Option 2: Manual Release
+
 ```bash
 # 1. Bump version
 node scripts/bump-version.js patch
@@ -103,6 +105,7 @@ npm run publish:all
 - **Major (x.0.0)**: Breaking changes
 
 While in 0.x.x:
+
 - API is considered unstable
 - Breaking changes can happen in minor versions
 - Use 0.0.x for initial development
