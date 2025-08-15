@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📚 Documentation
+    url: https://github.com/liquescent/log-correlator/tree/main/docs
+    about: Check out the documentation for API reference and guides
+  - name: 💬 Discussions
+    url: https://github.com/liquescent/log-correlator/discussions
+    about: Ask questions and discuss ideas with the community
+  - name: 🔒 Security Issue
+    url: https://github.com/liquescent/log-correlator/security/policy
+    about: Please report security vulnerabilities privately

@@ -1,0 +1,37 @@
+{
+  "name": "@liquescent/log-correlator-query-parser",
+  "version": "1.0.0",
+  "description": "PromQL-style query parser for log correlation",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "generate-parser": "peggy --format commonjs -o src/generated/parser.js grammar/logql.peggy",
+    "prebuild": "npm run generate-parser",
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "clean:all": "rm -rf dist src/generated",
+    "test": "jest"
+  },
+  "keywords": [
+    "promql",
+    "query",
+    "parser",
+    "logs"
+  ],
+  "author": "",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@liquescent/log-correlator-core": "^1.0.0",
+    "peggy": "^3.0.2"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.0",
+    "@types/node": "^20.10.0",
+    "ts-jest": "^29.1.1",
+    "typescript": "^5.3.0"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ]
+}

@@ -1,0 +1,17 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Build outputs
+dist/
+lib/
+build/
+*.min.js
+coverage/
+
+# Generated files
+packages/query-parser/src/generated/
+test-parser*.js
+
+# Examples (vanilla JS)
+packages/examples/**/*.js

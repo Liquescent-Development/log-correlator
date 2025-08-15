@@ -1,0 +1,43 @@
+name: Dependency Review
+
+on:
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v3
+        with:
+          fail-on-severity: high
+          deny-licenses: GPL-3.0, AGPL-3.0
+          
+      - name: Check for outdated dependencies
+        run: |
+          npm outdated || true
+          
+      - name: License check
+        run: |
+          npx license-checker --production --summary
+          
+      - name: Bundle size check
+        run: |
+          # Calculate bundle sizes
+          for pkg in packages/*/dist/*.min.js; do
+            if [ -f "$pkg" ]; then
+              size=$(wc -c < "$pkg")
+              echo "$(basename $pkg): $(($size / 1024))KB"
+            fi
+          done

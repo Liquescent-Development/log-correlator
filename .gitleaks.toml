@@ -1,0 +1,35 @@
+# Gitleaks configuration for log-correlator project
+
+title = "gitleaks config for log-correlator"
+
+# Allow placeholder patterns commonly used in documentation
+[allowlist]
+description = "Allowlist for documentation placeholders"
+paths = [
+  '''docs/.*\.md''',
+  '''README\.md''',
+  '''examples/.*\.js'''
+]
+regexes = [
+  '''<[A-Z_]+>''',  # Placeholders like <YOUR_TOKEN>, <USERNAME>
+  '''your[-_]?(?:token|api[-_]?key|password|secret)''',  # Common example placeholders
+  '''Bearer\s+<[A-Z_]+>''',  # Bearer token placeholders
+]
+
+# Extend the default rules but be more lenient with documentation
+[[rules]]
+id = "generic-api-key"
+description = "Generic API Key"
+regex = '''(?i)(?:api[_\-\s]?key|apikey)[\s]*[:=][\s]*['"]([a-zA-Z0-9]{20,})['"]'''
+tags = ["key", "api"]
+entropy = 3.5
+secretGroup = 1
+
+# Allow common test/example patterns in specific contexts
+[rules.allowlist]
+paths = [
+  '''.*_test\..*''',
+  '''.*\.test\..*''',
+  '''docs/.*''',
+  '''examples/.*'''
+]
