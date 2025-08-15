@@ -175,15 +175,25 @@ jobs:
           echo "Publishing with tag: $TAG"
           
           # Publish from temp directory in dependency order
+          # Use set -e to stop on first error
+          set -e
+          
           # 1. Query parser (no internal deps)
+          echo "Publishing @liquescent/log-correlator-query-parser..."
           cd temp-publish/query-parser && npm publish --access public --tag $TAG && cd ../..
           
           # 2. Core (depends on query-parser)
+          echo "Publishing @liquescent/log-correlator-core..."
           cd temp-publish/core && npm publish --access public --tag $TAG && cd ../..
           
           # 3. Adapters (depend on core)
+          echo "Publishing @liquescent/log-correlator-loki..."
           cd temp-publish/loki && npm publish --access public --tag $TAG && cd ../..
+          
+          echo "Publishing @liquescent/log-correlator-graylog..."
           cd temp-publish/graylog && npm publish --access public --tag $TAG && cd ../..
+          
+          echo "Publishing @liquescent/log-correlator-promql..."
           cd temp-publish/promql && npm publish --access public --tag $TAG && cd ../..
           
           echo "✅ All packages published successfully!"
@@ -192,15 +202,14 @@ jobs:
       
       - name: Create GitHub Release
         if: github.event_name == 'push'  # Only for tag pushes
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
+          name: Release ${{ github.ref_name }}
           body_path: RELEASE_NOTES.md
           draft: false
           prerelease: ${{ startsWith(github.ref, 'refs/tags/v0.') }}
+          token: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Notify success
         if: success()
