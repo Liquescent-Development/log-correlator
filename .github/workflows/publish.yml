@@ -176,15 +176,15 @@ jobs:
           
           # Publish from temp directory in dependency order
           # 1. Query parser (no internal deps)
-          npm publish temp-publish/query-parser --access public --tag $TAG
+          cd temp-publish/query-parser && npm publish --access public --tag $TAG && cd ../..
           
           # 2. Core (depends on query-parser)
-          npm publish temp-publish/core --access public --tag $TAG
+          cd temp-publish/core && npm publish --access public --tag $TAG && cd ../..
           
           # 3. Adapters (depend on core)
-          npm publish temp-publish/loki --access public --tag $TAG
-          npm publish temp-publish/graylog --access public --tag $TAG
-          npm publish temp-publish/promql --access public --tag $TAG
+          cd temp-publish/loki && npm publish --access public --tag $TAG && cd ../..
+          cd temp-publish/graylog && npm publish --access public --tag $TAG && cd ../..
+          cd temp-publish/promql && npm publish --access public --tag $TAG && cd ../..
           
           echo "✅ All packages published successfully!"
         env:
