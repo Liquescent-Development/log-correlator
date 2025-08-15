@@ -16,7 +16,7 @@
     "grafana"
   ],
   "author": "",
-  "license": "Apache-2.0",
+  "license": "AGPL-3.0",
   "dependencies": {
     "@liquescent/log-correlator-core": "^1.0.0",
     "node-fetch": "^2.7.0",
