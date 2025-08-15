@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* eslint-disable @typescript-eslint/no-var-requires */
 
 /**
  * Version bump script for monorepo
@@ -23,13 +24,14 @@ const PACKAGES = [
   'packages/adapters/promql'
 ];
 
-const INTERNAL_DEPS = [
-  '@liquescent/log-correlator-core',
-  '@liquescent/log-correlator-query-parser',
-  '@liquescent/log-correlator-loki',
-  '@liquescent/log-correlator-graylog',
-  '@liquescent/log-correlator-promql'
-];
+// Internal package dependencies - kept for future use
+// const INTERNAL_DEPS = [
+//   '@liquescent/log-correlator-core',
+//   '@liquescent/log-correlator-query-parser',
+//   '@liquescent/log-correlator-loki',
+//   '@liquescent/log-correlator-graylog',
+//   '@liquescent/log-correlator-promql'
+// ];
 
 function getCurrentVersion() {
   const pkg = JSON.parse(fs.readFileSync('packages/core/package.json', 'utf8'));
