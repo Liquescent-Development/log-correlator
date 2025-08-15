@@ -1,6 +1,6 @@
 {
   "name": "@liquescent/log-correlator-query-parser",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "PromQL-style query parser for log correlation",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -21,7 +21,7 @@
   "author": "",
   "license": "AGPL-3.0",
   "dependencies": {
-    "@liquescent/log-correlator-core": "^1.0.0",
+    "@liquescent/log-correlator-core": "file:../core",
     "peggy": "^3.0.2"
   },
   "devDependencies": {

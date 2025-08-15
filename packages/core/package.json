@@ -1,6 +1,6 @@
 {
   "name": "@liquescent/log-correlator-core",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "Core correlation engine for real-time log stream processing",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -21,7 +21,7 @@
   "author": "",
   "license": "AGPL-3.0",
   "dependencies": {
-    "@liquescent/log-correlator-query-parser": "^1.0.0",
+    "@liquescent/log-correlator-query-parser": "file:../query-parser",
     "eventemitter3": "^5.0.1",
     "lru-cache": "^11.1.0"
   },

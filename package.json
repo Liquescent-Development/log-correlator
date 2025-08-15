@@ -14,7 +14,19 @@
     "clean": "npm run clean --workspaces --if-present",
     "changelog": "node tools/changelog.js --unreleased",
     "changelog:all": "node tools/changelog.js --all",
-    "changelog:preview": "node tools/changelog.js --unreleased --dry-run"
+    "changelog:preview": "node tools/changelog.js --unreleased --dry-run",
+    "prepublish:all": "npm run clean && npm run build && npm test",
+    "publish:all": "npm run publish:query-parser && npm run publish:core && npm run publish:adapters",
+    "publish:query-parser": "npm publish packages/query-parser --access public",
+    "publish:core": "npm publish packages/core --access public",
+    "publish:adapters": "npm publish packages/adapters/loki --access public && npm publish packages/adapters/graylog --access public && npm publish packages/adapters/promql --access public",
+    "publish:dry-run": "npm publish --dry-run --workspaces",
+    "version:patch": "node scripts/bump-version.js patch",
+    "version:minor": "node scripts/bump-version.js minor",
+    "version:major": "node scripts/bump-version.js major",
+    "release:patch": "npm run version:patch && git add -A && git commit -m 'chore: bump version' && git tag v$(node -p 'require(\"./packages/core/package.json\").version')",
+    "release:minor": "npm run version:minor && git add -A && git commit -m 'chore: bump version' && git tag v$(node -p 'require(\"./packages/core/package.json\").version')",
+    "release:major": "npm run version:major && git add -A && git commit -m 'chore: bump version' && git tag v$(node -p 'require(\"./packages/core/package.json\").version')"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
