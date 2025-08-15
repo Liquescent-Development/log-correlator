@@ -1,9 +1,35 @@
 # Publishing Guide
 
-## Prerequisites
+## Automated Publishing (Recommended)
 
-1. npm account with access to `@liquescent` scope (or configure your own scope)
-2. Authenticated with npm: `npm login`
+Packages are automatically published to npm when a version tag is pushed to GitHub.
+
+### Quick Release Process
+
+```bash
+# 1. Bump version (patch, minor, or major)
+node scripts/bump-version.js patch  # 0.0.1 -> 0.0.2
+
+# 2. Commit changes
+git add -A
+git commit -m "chore: bump version to 0.0.2"
+
+# 3. Create and push tag
+git tag v0.0.2
+git push && git push --tags
+
+# 4. GitHub Actions will automatically publish to npm!
+```
+
+## Prerequisites for Automated Publishing
+
+1. **NPM_TOKEN** secret must be set in GitHub repository settings
+   - Get token from npm: `npm token create`
+   - Add to GitHub: Settings → Secrets → Actions → New repository secret
+   - Name: `NPM_TOKEN`
+   - Value: Your npm token
+
+2. npm account with access to `@liquescent` scope
 
 ## Version Management
 

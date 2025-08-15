@@ -1,0 +1,156 @@
+name: Publish to npm
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # Trigger on version tags like v0.0.1, v1.2.3
+  workflow_dispatch:  # Allow manual trigger from GitHub UI
+    inputs:
+      version:
+        description: 'Version to publish (e.g., 0.0.1)'
+        required: true
+        type: string
+      tag:
+        description: 'npm tag (latest, beta, next)'
+        required: true
+        default: 'latest'
+        type: choice
+        options:
+          - latest
+          - beta
+          - next
+          - alpha
+
+jobs:
+  publish:
+    name: Build and Publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write  # For GitHub Packages
+      id-token: write  # For npm provenance
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for changelog generation
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+          cache: 'npm'
+      
+      - name: Verify version consistency
+        run: |
+          # Extract version from tag or input
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            VERSION=${GITHUB_REF#refs/tags/v}
+          else
+            VERSION="${{ github.event.inputs.version }}"
+          fi
+          
+          echo "Publishing version: $VERSION"
+          
+          # Verify all packages have this version
+          for pkg in packages/*/package.json packages/adapters/*/package.json; do
+            if [ -f "$pkg" ]; then
+              PKG_VERSION=$(node -p "require('./$pkg').version")
+              PKG_NAME=$(node -p "require('./$pkg').name")
+              
+              if [ "$PKG_VERSION" != "$VERSION" ]; then
+                echo "❌ Version mismatch in $PKG_NAME: expected $VERSION, found $PKG_VERSION"
+                echo "Please update all package versions to $VERSION before tagging"
+                exit 1
+              fi
+              
+              echo "✅ $PKG_NAME: $PKG_VERSION"
+            fi
+          done
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build all packages
+        run: npm run build
+      
+      - name: Run tests
+        run: npm test
+      
+      - name: Run linter
+        run: npm run lint
+      
+      - name: Generate changelog
+        run: |
+          node tools/changelog.js --unreleased > RELEASE_NOTES.md
+          cat RELEASE_NOTES.md
+      
+      - name: Configure npm authentication
+        run: |
+          echo "//registry.npmjs.org/:_authToken=\${NODE_AUTH_TOKEN}" > ~/.npmrc
+          npm whoami
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      
+      - name: Publish packages
+        run: |
+          # Determine tag
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            VERSION=${GITHUB_REF#refs/tags/v}
+            # Use 'next' tag for pre-release versions (0.x.x)
+            if [[ "$VERSION" == 0.* ]]; then
+              TAG="next"
+            else
+              TAG="latest"
+            fi
+          else
+            TAG="${{ github.event.inputs.tag }}"
+          fi
+          
+          echo "Publishing with tag: $TAG"
+          
+          # Publish in dependency order
+          # 1. Query parser (no internal deps)
+          npm publish packages/query-parser --access public --tag $TAG
+          
+          # 2. Core (depends on query-parser)
+          npm publish packages/core --access public --tag $TAG
+          
+          # 3. Adapters (depend on core)
+          npm publish packages/adapters/loki --access public --tag $TAG
+          npm publish packages/adapters/graylog --access public --tag $TAG
+          npm publish packages/adapters/promql --access public --tag $TAG
+          
+          echo "✅ All packages published successfully!"
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      
+      - name: Create GitHub Release
+        if: github.event_name == 'push'  # Only for tag pushes
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          body_path: RELEASE_NOTES.md
+          draft: false
+          prerelease: ${{ startsWith(github.ref, 'refs/tags/v0.') }}
+      
+      - name: Notify success
+        if: success()
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "🎉 Successfully published version $VERSION to npm!"
+          echo ""
+          echo "Packages published:"
+          echo "- @liquescent/log-correlator-core@$VERSION"
+          echo "- @liquescent/log-correlator-query-parser@$VERSION"
+          echo "- @liquescent/log-correlator-loki@$VERSION"
+          echo "- @liquescent/log-correlator-graylog@$VERSION"
+          echo "- @liquescent/log-correlator-promql@$VERSION"
+          echo ""
+          echo "Install with:"
+          echo "  npm install @liquescent/log-correlator-core@$VERSION"
