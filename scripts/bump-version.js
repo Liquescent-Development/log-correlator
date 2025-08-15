@@ -62,18 +62,8 @@ function updatePackageVersion(pkgPath, newVersion) {
   const oldVersion = pkg.version;
   pkg.version = newVersion;
   
-  // Update internal dependencies to use the new version
-  for (const dep of INTERNAL_DEPS) {
-    if (pkg.dependencies && pkg.dependencies[dep]) {
-      pkg.dependencies[dep] = `^${newVersion}`;
-    }
-    if (pkg.devDependencies && pkg.devDependencies[dep]) {
-      pkg.devDependencies[dep] = `^${newVersion}`;
-    }
-    if (pkg.peerDependencies && pkg.peerDependencies[dep]) {
-      pkg.peerDependencies[dep] = `^${newVersion}`;
-    }
-  }
+  // Keep file: references for local development
+  // The publish workflow will replace these with proper versions
   
   fs.writeFileSync(pkgFile, JSON.stringify(pkg, null, 2) + '\n');
   console.log(`✅ ${pkg.name}: ${oldVersion} → ${newVersion}`);

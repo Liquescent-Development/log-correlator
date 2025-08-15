@@ -21,7 +21,7 @@
   "author": "",
   "license": "AGPL-3.0",
   "dependencies": {
-    "@liquescent/log-correlator-core": "^0.0.1",
+    "@liquescent/log-correlator-core": "file:../core",
     "peggy": "^3.0.2"
   },
   "devDependencies": {

@@ -1,6 +1,6 @@
 {
   "name": "@liquescent/log-correlator-examples",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "private": true,
   "description": "Usage examples for log-correlator",
   "scripts": {
@@ -10,8 +10,8 @@
     "example:streaming": "node streaming-correlation.js"
   },
   "dependencies": {
-    "@liquescent/log-correlator-core": "^1.0.0",
-    "@liquescent/log-correlator-loki": "^1.0.0",
-    "@liquescent/log-correlator-graylog": "^1.0.0"
+    "@liquescent/log-correlator-core": "file:../core",
+    "@liquescent/log-correlator-loki": "file:../adapters/loki",
+    "@liquescent/log-correlator-graylog": "file:../adapters/graylog"
   }
 }

@@ -76,6 +76,28 @@ jobs:
       - name: Build all packages
         run: npm run build
       
+      - name: Update package.json for publishing
+        run: |
+          # Get version from tag or input
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            VERSION=${GITHUB_REF#refs/tags/v}
+          else
+            VERSION="${{ github.event.inputs.version }}"
+          fi
+          
+          # Replace file: references with proper npm versions for publishing
+          for pkg in packages/*/package.json packages/adapters/*/package.json; do
+            if [ -f "$pkg" ]; then
+              # Replace file: references with versioned dependencies
+              sed -i "s|\"file:../../core\"|\"^$VERSION\"|g" "$pkg"
+              sed -i "s|\"file:../core\"|\"^$VERSION\"|g" "$pkg"
+              sed -i "s|\"file:../query-parser\"|\"^$VERSION\"|g" "$pkg"
+              
+              echo "Updated $pkg for publishing"
+              cat "$pkg" | grep "@liquescent" || true
+            fi
+          done
+      
       - name: Run tests
         run: npm test
       

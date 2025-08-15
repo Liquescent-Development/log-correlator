@@ -10,7 +10,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@liquescent/log-correlator-core": "^0.0.1",
+    "@liquescent/log-correlator-core": "file:../../core",
     "node-fetch": "^2.6.7"
   },
   "devDependencies": {
