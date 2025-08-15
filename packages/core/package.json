@@ -19,7 +19,7 @@
     "graylog"
   ],
   "author": "",
-  "license": "Apache-2.0",
+  "license": "AGPL-3.0",
   "dependencies": {
     "@liquescent/log-correlator-query-parser": "^1.0.0",
     "eventemitter3": "^5.0.1",

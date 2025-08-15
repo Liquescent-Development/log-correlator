@@ -104,4 +104,4 @@ See the [docs](./docs) directory for detailed documentation.
 
 ## License
 
-Apache-2.0
+AGPLv3
