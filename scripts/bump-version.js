@@ -22,6 +22,7 @@ const PACKAGES = [
   "packages/adapters/loki",
   "packages/adapters/graylog",
   "packages/adapters/promql",
+  "packages/examples",
 ];
 
 // Internal package dependencies - kept for future use
