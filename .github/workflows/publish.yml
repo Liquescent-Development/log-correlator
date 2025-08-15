@@ -204,8 +204,23 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       
-      - name: Create GitHub Release
+      - name: Check if release exists
         if: github.event_name == 'push'  # Only for tag pushes
+        id: check_release
+        run: |
+          TAG_NAME="${{ github.ref_name }}"
+          if gh release view "$TAG_NAME" >/dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "✅ Release $TAG_NAME already exists, skipping creation"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "📝 Release $TAG_NAME does not exist, will create it"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Create GitHub Release
+        if: github.event_name == 'push' && steps.check_release.outputs.exists == 'false'
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.ref }}
