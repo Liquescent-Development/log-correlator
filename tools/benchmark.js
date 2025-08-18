@@ -371,8 +371,8 @@ class BenchmarkScenarios {
       const correlationStart = performance.now();
       
       // Simulate generating events from 3 services
-      const services = ['frontend', 'backend', 'database'];
-      for (const _service of services) {
+      const serviceCount = 3; // frontend, backend, database
+      for (let s = 0; s < serviceCount; s++) {
         const batchSize = Math.floor(Math.random() * 5) + 1;
         for (let i = 0; i < batchSize; i++) {
           collector.recordEvent();
