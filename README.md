@@ -6,7 +6,7 @@ A TypeScript npm package that enables real-time correlation of log streams from 
 
 - **Real-time Stream Processing**: Handle live log streams from multiple sources simultaneously
 - **PromQL-style Query Language**: Familiar syntax for join operations and filtering
-- **Multiple Data Sources**: Built-in adapters for Loki and Graylog
+- **Multiple Data Sources**: Built-in adapters for Loki and Graylog (supports v2.x-6.x+)
 - **JavaScript-First API**: Easy consumption from vanilla JavaScript/Node.js
 - **Memory Efficient**: Bounded buffers with configurable time windows
 - **Electron Compatible**: Designed for integration with Electron applications

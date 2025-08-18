@@ -68,6 +68,22 @@ describe("GraylogAdapter", () => {
       adapter = new GraylogAdapter(customOptions);
       expect(adapter.getName()).toBe("graylog");
     });
+
+    it("should default to legacy API version", () => {
+      adapter = new GraylogAdapter(defaultOptions);
+      expect(adapter.getName()).toBe("graylog");
+      // The adapter should use legacy API by default
+    });
+
+    it("should accept v6 API version option", () => {
+      const v6Options = {
+        ...defaultOptions,
+        apiVersion: "v6" as const,
+      };
+
+      adapter = new GraylogAdapter(v6Options);
+      expect(adapter.getName()).toBe("graylog");
+    });
   });
 
   describe("Authentication", () => {
@@ -478,6 +494,136 @@ describe("GraylogAdapter", () => {
       jest.advanceTimersByTime(defaultOptions.pollInterval!);
 
       // Should continue polling with backoff
+      expect(mockFetch).toHaveBeenCalled();
+
+      await adapter.destroy();
+    });
+  });
+
+  describe("Graylog v6 API", () => {
+    beforeEach(() => {
+      defaultOptions = {
+        ...defaultOptions,
+        apiVersion: "v6",
+      };
+      adapter = new GraylogAdapter(defaultOptions);
+    });
+
+    it("should use POST method for v6 views API", async () => {
+      const query = "service:frontend";
+
+      mockFetch.mockResolvedValue({
+        ok: true,
+        text: jest
+          .fn()
+          .mockResolvedValue(
+            "timestamp,source,message\n" +
+              "2024-01-01T10:00:00Z,frontend,Test message 1\n" +
+              "2024-01-01T10:00:01Z,frontend,Test message 2",
+          ),
+      } as any);
+
+      const streamIterator = adapter.createStream(query);
+      const iterator = streamIterator[Symbol.asyncIterator]();
+
+      void iterator.next();
+      jest.advanceTimersByTime(100);
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining("/api/views/search/messages"),
+        expect.objectContaining({
+          method: "POST",
+          headers: expect.objectContaining({
+            "Content-Type": "application/json",
+            Accept: "text/csv",
+          }),
+          body: expect.stringContaining('"query_string"'),
+        }),
+      );
+
+      await adapter.destroy();
+    });
+
+    it("should parse CSV response from v6 API", async () => {
+      const query = "service:frontend";
+
+      const csvResponse =
+        "timestamp,source,message,_id,request_id\n" +
+        '"2024-01-01T10:00:00Z","frontend","Request started","msg1","req123"\n' +
+        '"2024-01-01T10:00:01Z","backend","Request processed","msg2","req123"';
+
+      mockFetch.mockResolvedValue({
+        ok: true,
+        text: jest.fn().mockResolvedValue(csvResponse),
+      } as any);
+
+      const streamIterator = adapter.createStream(query);
+      const results: LogEvent[] = [];
+
+      for await (const event of streamIterator) {
+        results.push(event);
+        if (results.length >= 2) break;
+      }
+
+      expect(results).toHaveLength(2);
+      expect(results[0]).toMatchObject({
+        timestamp: "2024-01-01T10:00:00Z",
+        source: "graylog",
+        stream: "frontend",
+        message: "Request started",
+      });
+      expect(results[1]).toMatchObject({
+        timestamp: "2024-01-01T10:00:01Z",
+        source: "graylog",
+        stream: "backend",
+        message: "Request processed",
+      });
+
+      await adapter.destroy();
+    });
+
+    it("should handle CSV with quoted fields containing commas", async () => {
+      const query = "service:frontend";
+
+      const csvResponse =
+        "timestamp,message\n" +
+        '"2024-01-01T10:00:00Z","Error: Failed to process, reason: timeout"';
+
+      mockFetch.mockResolvedValue({
+        ok: true,
+        text: jest.fn().mockResolvedValue(csvResponse),
+      } as any);
+
+      const streamIterator = adapter.createStream(query);
+      const results: LogEvent[] = [];
+
+      for await (const event of streamIterator) {
+        results.push(event);
+        break;
+      }
+
+      expect(results[0].message).toBe(
+        "Error: Failed to process, reason: timeout",
+      );
+
+      await adapter.destroy();
+    });
+
+    it("should handle empty CSV response", async () => {
+      const query = "service:frontend";
+
+      mockFetch.mockResolvedValue({
+        ok: true,
+        text: jest.fn().mockResolvedValue(""),
+      } as any);
+
+      const streamIterator = adapter.createStream(query);
+      const iterator = streamIterator[Symbol.asyncIterator]();
+
+      void iterator.next();
+      jest.advanceTimersByTime(defaultOptions.pollInterval! * 2);
+
+      // Should continue polling even with empty response
       expect(mockFetch).toHaveBeenCalled();
 
       await adapter.destroy();
