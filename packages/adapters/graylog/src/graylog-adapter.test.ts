@@ -78,7 +78,7 @@ describe("GraylogAdapter", () => {
     it("should accept v6 API version option", () => {
       const v6Options = {
         ...defaultOptions,
-        apiVersion: 'v6' as const,
+        apiVersion: "v6" as const,
       };
 
       adapter = new GraylogAdapter(v6Options);
@@ -504,26 +504,28 @@ describe("GraylogAdapter", () => {
     beforeEach(() => {
       defaultOptions = {
         ...defaultOptions,
-        apiVersion: 'v6',
+        apiVersion: "v6",
       };
       adapter = new GraylogAdapter(defaultOptions);
     });
 
     it("should use POST method for v6 views API", async () => {
       const query = "service:frontend";
-      
+
       mockFetch.mockResolvedValue({
         ok: true,
-        text: jest.fn().mockResolvedValue(
-          'timestamp,source,message\n' +
-          '2024-01-01T10:00:00Z,frontend,Test message 1\n' +
-          '2024-01-01T10:00:01Z,frontend,Test message 2'
-        ),
+        text: jest
+          .fn()
+          .mockResolvedValue(
+            "timestamp,source,message\n" +
+              "2024-01-01T10:00:00Z,frontend,Test message 1\n" +
+              "2024-01-01T10:00:01Z,frontend,Test message 2",
+          ),
       } as any);
 
       const streamIterator = adapter.createStream(query);
       const iterator = streamIterator[Symbol.asyncIterator]();
-      
+
       void iterator.next();
       jest.advanceTimersByTime(100);
 
@@ -544,9 +546,9 @@ describe("GraylogAdapter", () => {
 
     it("should parse CSV response from v6 API", async () => {
       const query = "service:frontend";
-      
-      const csvResponse = 
-        'timestamp,source,message,_id,request_id\n' +
+
+      const csvResponse =
+        "timestamp,source,message,_id,request_id\n" +
         '"2024-01-01T10:00:00Z","frontend","Request started","msg1","req123"\n' +
         '"2024-01-01T10:00:01Z","backend","Request processed","msg2","req123"';
 
@@ -582,9 +584,9 @@ describe("GraylogAdapter", () => {
 
     it("should handle CSV with quoted fields containing commas", async () => {
       const query = "service:frontend";
-      
-      const csvResponse = 
-        'timestamp,message\n' +
+
+      const csvResponse =
+        "timestamp,message\n" +
         '"2024-01-01T10:00:00Z","Error: Failed to process, reason: timeout"';
 
       mockFetch.mockResolvedValue({
@@ -600,14 +602,16 @@ describe("GraylogAdapter", () => {
         break;
       }
 
-      expect(results[0].message).toBe("Error: Failed to process, reason: timeout");
+      expect(results[0].message).toBe(
+        "Error: Failed to process, reason: timeout",
+      );
 
       await adapter.destroy();
     });
 
     it("should handle empty CSV response", async () => {
       const query = "service:frontend";
-      
+
       mockFetch.mockResolvedValue({
         ok: true,
         text: jest.fn().mockResolvedValue(""),
@@ -615,7 +619,7 @@ describe("GraylogAdapter", () => {
 
       const streamIterator = adapter.createStream(query);
       const iterator = streamIterator[Symbol.asyncIterator]();
-      
+
       void iterator.next();
       jest.advanceTimersByTime(defaultOptions.pollInterval! * 2);
 

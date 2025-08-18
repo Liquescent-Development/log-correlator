@@ -18,25 +18,25 @@ The adapter supports multiple Graylog versions through configurable API endpoint
 ## Configuration
 
 ```javascript
-const { GraylogAdapter } = require('@liquescent/log-correlator-graylog');
+const { GraylogAdapter } = require("@liquescent/log-correlator-graylog");
 
 // For Graylog 2.x - 5.x (default)
 const legacyAdapter = new GraylogAdapter({
-  url: 'http://graylog.example.com:9000',
-  username: 'admin',
-  password: 'password',
-  apiVersion: 'legacy', // Optional, this is the default
-  pollInterval: 2000,   // Poll every 2 seconds
-  timeout: 15000,       // 15 second timeout
+  url: "http://graylog.example.com:9000",
+  username: "admin",
+  password: "password",
+  apiVersion: "legacy", // Optional, this is the default
+  pollInterval: 2000, // Poll every 2 seconds
+  timeout: 15000, // 15 second timeout
 });
 
 // For Graylog 6.x+
 const v6Adapter = new GraylogAdapter({
-  url: 'http://graylog.example.com:9000',
-  apiToken: 'your-api-token',
-  apiVersion: 'v6',     // Required for Graylog 6.x
+  url: "http://graylog.example.com:9000",
+  apiToken: "your-api-token",
+  apiVersion: "v6", // Required for Graylog 6.x
   pollInterval: 2000,
-  streamId: 'stream-id' // Optional: filter by stream
+  streamId: "stream-id", // Optional: filter by stream
 });
 ```
 
@@ -50,25 +50,27 @@ The adapter supports two authentication methods:
 ```javascript
 // Basic auth
 const adapter = new GraylogAdapter({
-  url: 'http://graylog.example.com:9000',
-  username: 'admin',
-  password: 'password'
+  url: "http://graylog.example.com:9000",
+  username: "admin",
+  password: "password",
 });
 
 // API token
 const adapter = new GraylogAdapter({
-  url: 'http://graylog.example.com:9000',
-  apiToken: 'your-api-token'
+  url: "http://graylog.example.com:9000",
+  apiToken: "your-api-token",
 });
 ```
 
 ## API Endpoints Used
 
 ### Legacy API (Graylog 2.x - 5.x)
+
 - `GET /api/search/universal/relative` - Search for log messages
 - `GET /api/streams` - List available streams
 
 ### Views API (Graylog 6.x+)
+
 - `POST /api/views/search/messages` - Search for log messages with CSV export
 - `GET /api/streams` - List available streams
 
@@ -78,38 +80,41 @@ The adapter converts simplified query syntax to Graylog query format:
 
 ```javascript
 // Simple field queries
-"service:frontend"
-"level:error"
+"service:frontend";
+"level:error";
 
 // Quoted values
-'service="frontend"'
-'message="error occurred"'
+'service="frontend"';
+'message="error occurred"';
 
 // Boolean operators
-"service:frontend AND level:error"
-"service:frontend OR service:backend"
+"service:frontend AND level:error";
+"service:frontend OR service:backend";
 ```
 
 ## Usage Example
 
 ```javascript
-const { CorrelationEngine } = require('@liquescent/log-correlator-core');
-const { GraylogAdapter } = require('@liquescent/log-correlator-graylog');
+const { CorrelationEngine } = require("@liquescent/log-correlator-core");
+const { GraylogAdapter } = require("@liquescent/log-correlator-graylog");
 
 const engine = new CorrelationEngine();
 
 // Add Graylog adapter
-engine.addAdapter('graylog', new GraylogAdapter({
-  url: 'http://graylog.example.com:9000',
-  apiToken: 'your-token',
-  apiVersion: 'v6' // For Graylog 6.x
-}));
+engine.addAdapter(
+  "graylog",
+  new GraylogAdapter({
+    url: "http://graylog.example.com:9000",
+    apiToken: "your-token",
+    apiVersion: "v6", // For Graylog 6.x
+  }),
+);
 
 // Query logs
-const query = 'graylog(service:api AND level:error)[5m]';
+const query = "graylog(service:api AND level:error)[5m]";
 
 for await (const event of engine.correlate(query)) {
-  console.log('Log event:', event);
+  console.log("Log event:", event);
 }
 ```
 
@@ -123,17 +128,17 @@ for await (const event of engine.correlate(query)) {
 
 ## Options
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `url` | string | required | Graylog server URL |
-| `username` | string | - | Username for basic auth |
-| `password` | string | - | Password for basic auth |
-| `apiToken` | string | - | API token for token auth |
-| `apiVersion` | 'legacy' \| 'v6' | 'legacy' | API version to use |
-| `pollInterval` | number | 2000 | Polling interval in milliseconds |
-| `timeout` | number | 15000 | Request timeout in milliseconds |
-| `maxRetries` | number | 3 | Maximum retry attempts |
-| `streamId` | string | - | Filter by Graylog stream ID |
+| Option         | Type             | Default  | Description                      |
+| -------------- | ---------------- | -------- | -------------------------------- |
+| `url`          | string           | required | Graylog server URL               |
+| `username`     | string           | -        | Username for basic auth          |
+| `password`     | string           | -        | Password for basic auth          |
+| `apiToken`     | string           | -        | API token for token auth         |
+| `apiVersion`   | 'legacy' \| 'v6' | 'legacy' | API version to use               |
+| `pollInterval` | number           | 2000     | Polling interval in milliseconds |
+| `timeout`      | number           | 15000    | Request timeout in milliseconds  |
+| `maxRetries`   | number           | 3        | Maximum retry attempts           |
+| `streamId`     | string           | -        | Filter by Graylog stream ID      |
 
 ## Note on Permissions
 

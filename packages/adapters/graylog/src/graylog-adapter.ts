@@ -14,7 +14,7 @@ export interface GraylogAdapterOptions {
   timeout?: number;
   maxRetries?: number;
   streamId?: string;
-  apiVersion?: 'legacy' | 'v6'; // 'legacy' for universal search, 'v6' for views API
+  apiVersion?: "legacy" | "v6"; // 'legacy' for universal search, 'v6' for views API
 }
 
 interface GraylogMessage {
@@ -48,7 +48,7 @@ interface GraylogSearchResponse {
 interface GraylogViewsSearchRequest {
   chunk_size?: number;
   timerange: {
-    type: 'relative';
+    type: "relative";
     from: number; // seconds
   };
   streams?: string[];
@@ -69,7 +69,7 @@ export class GraylogAdapter implements DataSourceAdapter {
       pollInterval: 2000,
       timeout: 15000,
       maxRetries: 3,
-      apiVersion: 'legacy', // Default to legacy for backward compatibility
+      apiVersion: "legacy", // Default to legacy for backward compatibility
       ...options,
     };
 
@@ -174,7 +174,7 @@ export class GraylogAdapter implements DataSourceAdapter {
     params: Record<string, unknown>,
     signal: AbortSignal,
   ): Promise<GraylogSearchResponse> {
-    if (this.options.apiVersion === 'v6') {
+    if (this.options.apiVersion === "v6") {
       return this.searchViews(params, signal);
     } else {
       return this.searchUniversal(params, signal);
@@ -216,26 +216,26 @@ export class GraylogAdapter implements DataSourceAdapter {
     signal: AbortSignal,
   ): Promise<GraylogSearchResponse> {
     const url = `${this.options.url}/api/views/search/messages`;
-    
+
     // Calculate time window in seconds for relative timerange
     // Graylog v6 expects "from" as seconds ago (e.g., 300 for last 5 minutes)
     const now = Date.now();
     const fromTime = new Date(params.from as string).getTime();
     const timeWindowSec = Math.ceil((now - fromTime) / 1000);
-    
+
     const requestBody: GraylogViewsSearchRequest = {
       chunk_size: 1000,
       timerange: {
-        type: 'relative',
+        type: "relative",
         from: timeWindowSec,
       },
       limit: (params.limit as number) || 1000,
       query_string: {
-        query_string: params.query as string || '*',
+        query_string: (params.query as string) || "*",
       },
-      fields_in_order: ['timestamp', 'source', 'message'],
+      fields_in_order: ["timestamp", "source", "message"],
     };
-    
+
     // Add streams filter if configured
     if (this.options.streamId) {
       requestBody.streams = [this.options.streamId];
@@ -269,7 +269,7 @@ export class GraylogAdapter implements DataSourceAdapter {
   }
 
   private parseCSVResponse(csv: string): GraylogSearchResponse {
-    const lines = csv.split('\n').filter(line => line.trim());
+    const lines = csv.split("\n").filter((line) => line.trim());
     if (lines.length === 0) {
       return {
         messages: [],
@@ -289,22 +289,22 @@ export class GraylogAdapter implements DataSourceAdapter {
       if (values.length !== headers.length) continue;
 
       const fields: Record<string, unknown> = {};
-      let timestamp = '';
-      let message = '';
-      let source = '';
-      let id = '';
+      let timestamp = "";
+      let message = "";
+      let source = "";
+      let id = "";
 
       for (let j = 0; j < headers.length; j++) {
         const header = headers[j].toLowerCase();
         const value = values[j];
 
-        if (header === 'timestamp') {
+        if (header === "timestamp") {
           timestamp = value;
-        } else if (header === 'message') {
+        } else if (header === "message") {
           message = value;
-        } else if (header === 'source') {
+        } else if (header === "source") {
           source = value;
-        } else if (header === '_id' || header === 'id') {
+        } else if (header === "_id" || header === "id") {
           id = value;
         } else {
           fields[header] = value;
@@ -319,7 +319,7 @@ export class GraylogAdapter implements DataSourceAdapter {
           source,
           fields,
         },
-        index: 'graylog',
+        index: "graylog",
       });
     }
 
@@ -327,13 +327,15 @@ export class GraylogAdapter implements DataSourceAdapter {
       messages,
       total_results: messages.length,
       from: messages[0]?.message.timestamp || new Date().toISOString(),
-      to: messages[messages.length - 1]?.message.timestamp || new Date().toISOString(),
+      to:
+        messages[messages.length - 1]?.message.timestamp ||
+        new Date().toISOString(),
     };
   }
 
   private parseCSVLine(line: string): string[] {
     const result: string[] = [];
-    let current = '';
+    let current = "";
     let inQuotes = false;
 
     for (let i = 0; i < line.length; i++) {
@@ -349,17 +351,17 @@ export class GraylogAdapter implements DataSourceAdapter {
           // Toggle quote state
           inQuotes = !inQuotes;
         }
-      } else if (char === ',' && !inQuotes) {
+      } else if (char === "," && !inQuotes) {
         // Field separator
         result.push(current);
-        current = '';
+        current = "";
       } else {
         current += char;
       }
     }
 
     // Add last field
-    if (current || line.endsWith(',')) {
+    if (current || line.endsWith(",")) {
       result.push(current);
     }
 

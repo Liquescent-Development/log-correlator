@@ -99,25 +99,25 @@ class MockAdapter {
     const rate = options.eventsPerSecond || CONFIG.eventsPerSecond;
     const interval = 1000 / rate;
     const startTime = Date.now();
-    
+
     // Parse the query to determine what events to generate
     const service = this.extractService(query);
-    
+
     // Generate events continuously for the duration
     while (Date.now() - startTime < duration) {
       const event = this.generator.generateLogEvent();
-      
+
       // Only yield events that match the query service
       if (!service || event.labels.service === service) {
         this.eventCount++;
         yield event;
       }
-      
+
       // Pace the generation
       await new Promise((resolve) => setTimeout(resolve, interval));
     }
   }
-  
+
   extractService(query) {
     // Simple extraction of service from query like 'loki({service="frontend"})'
     const match = query.match(/service="([^"]+)"/);
@@ -312,64 +312,66 @@ class BenchmarkScenarios {
   static async simpleCorrelation(engine, collector, duration) {
     // For benchmarking, we'll simulate events and correlations directly
     // since the actual correlation engine might not work with mock data
-    
+
     const startTime = Date.now();
     const endTime = startTime + duration;
     const eventsPerSecond = CONFIG.eventsPerSecond;
     const interval = 1000 / eventsPerSecond;
-    
+
     let eventCount = 0;
     let correlationCount = 0;
-    
+
     // Simulate generating and correlating events
     while (Date.now() < endTime) {
       const correlationStart = performance.now();
-      
+
       // Simulate generating a batch of events
       const batchSize = Math.floor(Math.random() * 10) + 1;
       for (let i = 0; i < batchSize; i++) {
         collector.recordEvent();
         eventCount++;
       }
-      
+
       // Simulate correlation matching (10% of events result in correlations)
       if (Math.random() < 0.1) {
         const latency = performance.now() - correlationStart;
         collector.recordCorrelation(latency);
         correlationCount++;
       }
-      
+
       if (CONFIG.verbose && eventCount % 1000 === 0) {
         console.log(`Events: ${eventCount}, Correlations: ${correlationCount}`);
       }
-      
+
       // Pace the generation
       await new Promise((resolve) => setTimeout(resolve, interval));
     }
-    
+
     if (CONFIG.verbose) {
-      console.log(`Final - Events: ${eventCount}, Correlations: ${correlationCount}`);
+      console.log(
+        `Final - Events: ${eventCount}, Correlations: ${correlationCount}`,
+      );
     }
-    
+
     return correlationCount;
   }
 
   static async complexCorrelation(engine, collector, duration) {
     // For benchmarking, we'll simulate a more complex correlation scenario
     // with multiple services and higher latency
-    
+
     const startTime = Date.now();
     const endTime = startTime + duration;
     const eventsPerSecond = CONFIG.eventsPerSecond;
     const interval = 1000 / eventsPerSecond;
-    
+
     let eventCount = 0;
     let correlationCount = 0;
-    
+
     // Simulate generating and correlating events from multiple services
     while (Date.now() < endTime) {
       const correlationStart = performance.now();
-      
+
       // Simulate generating events from 3 services
       const serviceCount = 3; // frontend, backend, database
       for (let s = 0; s < serviceCount; s++) {
@@ -379,29 +381,31 @@ class BenchmarkScenarios {
           eventCount++;
         }
       }
-      
+
       // Simulate complex correlation matching (5% success rate, higher latency)
       if (Math.random() < 0.05) {
         // Add artificial latency for complex correlations
         await new Promise((resolve) => setTimeout(resolve, Math.random() * 10));
-        
+
         const latency = performance.now() - correlationStart;
         collector.recordCorrelation(latency);
         correlationCount++;
       }
-      
+
       if (CONFIG.verbose && eventCount % 1000 === 0) {
         console.log(`Events: ${eventCount}, Correlations: ${correlationCount}`);
       }
-      
+
       // Pace the generation
       await new Promise((resolve) => setTimeout(resolve, interval));
     }
-    
+
     if (CONFIG.verbose) {
-      console.log(`Final - Events: ${eventCount}, Correlations: ${correlationCount}`);
+      console.log(
+        `Final - Events: ${eventCount}, Correlations: ${correlationCount}`,
+      );
     }
-    
+
     return correlationCount;
   }
 
