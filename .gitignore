@@ -9,3 +9,7 @@ coverage/
 *.tsbuildinfo
 .vscode/
 .idea/
+
+# Project-specific configuration files
+CLAUDE.md
+.claude/
