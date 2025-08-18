@@ -9,3 +9,7 @@ coverage/
 *.tsbuildinfo
 .vscode/
 .idea/
+
+# Project-specific instructions for AI assistants
+CLAUDE.md
+.claude/

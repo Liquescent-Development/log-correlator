@@ -23,6 +23,8 @@ npm install @liquescent/log-correlator-graylog@^0.0.1  # Optional: Graylog adapt
 
 ## Quick Start
 
+### Basic Example with Loki
+
 ```javascript
 const { CorrelationEngine } = require("@liquescent/log-correlator-core");
 const { LokiAdapter } = require("@liquescent/log-correlator-loki");
@@ -48,6 +50,42 @@ const query = `
 `;
 
 // Stream results
+for await (const correlation of engine.correlate(query)) {
+  console.log("Correlated events:", correlation);
+}
+```
+
+### Graylog 6.x Example
+
+For Graylog 6.x deployments where universal search API access may be restricted:
+
+```javascript
+const { CorrelationEngine } = require("@liquescent/log-correlator-core");
+const { GraylogAdapter } = require("@liquescent/log-correlator-graylog");
+
+const engine = new CorrelationEngine({
+  timeWindow: 30000,
+  maxEvents: 10000,
+});
+
+// Configure for Graylog 6.x with Views API
+engine.addAdapter(
+  "graylog",
+  new GraylogAdapter({
+    url: "http://graylog.example.com:9000",
+    apiToken: "your-api-token",
+    apiVersion: "v6", // Use Views API instead of Universal Search
+    pollInterval: 2000,
+  }),
+);
+
+// Correlate logs from different services
+const query = `
+  graylog(service:frontend)[5m]
+    and on(request_id)
+    graylog(service:backend)[5m]
+`;
+
 for await (const correlation of engine.correlate(query)) {
   console.log("Correlated events:", correlation);
 }
