@@ -372,7 +372,7 @@ class BenchmarkScenarios {
       
       // Simulate generating events from 3 services
       const services = ['frontend', 'backend', 'database'];
-      for (const service of services) {
+      for (const _service of services) {
         const batchSize = Math.floor(Math.random() * 5) + 1;
         for (let i = 0; i < batchSize; i++) {
           collector.recordEvent();

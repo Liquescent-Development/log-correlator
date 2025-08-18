@@ -14,6 +14,7 @@ export interface GraylogAdapterOptions {
   timeout?: number;
   maxRetries?: number;
   streamId?: string;
+  apiVersion?: 'legacy' | 'v6'; // 'legacy' for universal search, 'v6' for views API
 }
 
 interface GraylogMessage {
@@ -34,6 +35,31 @@ interface GraylogSearchResponse {
   to: string;
 }
 
+// Graylog 6.x views API response format
+// Currently unused but kept for future enhancements
+// interface GraylogViewsMessage {
+//   _id: string;
+//   timestamp: string;
+//   message: string;
+//   source?: string;
+//   [key: string]: unknown; // Additional fields
+// }
+
+interface GraylogViewsSearchRequest {
+  chunk_size?: number;
+  timerange: {
+    type: 'relative';
+    from: number; // seconds
+  };
+  streams?: string[];
+  limit?: number;
+  time_zone?: string;
+  fields_in_order?: string[];
+  query_string: {
+    query_string: string;
+  };
+}
+
 export class GraylogAdapter implements DataSourceAdapter {
   private activeStreams: Set<AbortController> = new Set();
   private authHeader: string;
@@ -43,6 +69,7 @@ export class GraylogAdapter implements DataSourceAdapter {
       pollInterval: 2000,
       timeout: 15000,
       maxRetries: 3,
+      apiVersion: 'legacy', // Default to legacy for backward compatibility
       ...options,
     };
 
@@ -147,6 +174,17 @@ export class GraylogAdapter implements DataSourceAdapter {
     params: Record<string, unknown>,
     signal: AbortSignal,
   ): Promise<GraylogSearchResponse> {
+    if (this.options.apiVersion === 'v6') {
+      return this.searchViews(params, signal);
+    } else {
+      return this.searchUniversal(params, signal);
+    }
+  }
+
+  private async searchUniversal(
+    params: Record<string, unknown>,
+    signal: AbortSignal,
+  ): Promise<GraylogSearchResponse> {
     const url = `${this.options.url}/api/search/universal/relative`;
     const queryParams = new URLSearchParams(params as Record<string, string>);
 
@@ -171,6 +209,161 @@ export class GraylogAdapter implements DataSourceAdapter {
     }
 
     return await response.json();
+  }
+
+  private async searchViews(
+    params: Record<string, unknown>,
+    signal: AbortSignal,
+  ): Promise<GraylogSearchResponse> {
+    const url = `${this.options.url}/api/views/search/messages`;
+    
+    // Calculate time window in seconds for relative timerange
+    // Graylog v6 expects "from" as seconds ago (e.g., 300 for last 5 minutes)
+    const now = Date.now();
+    const fromTime = new Date(params.from as string).getTime();
+    const timeWindowSec = Math.ceil((now - fromTime) / 1000);
+    
+    const requestBody: GraylogViewsSearchRequest = {
+      chunk_size: 1000,
+      timerange: {
+        type: 'relative',
+        from: timeWindowSec,
+      },
+      limit: (params.limit as number) || 1000,
+      query_string: {
+        query_string: params.query as string || '*',
+      },
+      fields_in_order: ['timestamp', 'source', 'message'],
+    };
+    
+    // Add streams filter if configured
+    if (this.options.streamId) {
+      requestBody.streams = [this.options.streamId];
+    }
+
+    const fetchOptions: RequestInit = {
+      method: "POST",
+      headers: {
+        Authorization: this.authHeader,
+        "Content-Type": "application/json",
+        Accept: "text/csv", // Views API returns CSV by default
+        "X-Requested-By": "log-correlator",
+      },
+      body: JSON.stringify(requestBody),
+      signal,
+    };
+
+    const response = await fetch(url, fetchOptions);
+
+    if (!response.ok) {
+      throw new CorrelationError(
+        `Graylog views search failed: ${response.statusText}`,
+        "GRAYLOG_SEARCH_ERROR",
+        { status: response.status },
+      );
+    }
+
+    // Parse CSV response and convert to standard format
+    const csvText = await response.text();
+    return this.parseCSVResponse(csvText);
+  }
+
+  private parseCSVResponse(csv: string): GraylogSearchResponse {
+    const lines = csv.split('\n').filter(line => line.trim());
+    if (lines.length === 0) {
+      return {
+        messages: [],
+        total_results: 0,
+        from: new Date().toISOString(),
+        to: new Date().toISOString(),
+      };
+    }
+
+    // Parse CSV header
+    const headers = this.parseCSVLine(lines[0]);
+    const messages: Array<{ message: GraylogMessage; index: string }> = [];
+
+    // Parse data rows
+    for (let i = 1; i < lines.length; i++) {
+      const values = this.parseCSVLine(lines[i]);
+      if (values.length !== headers.length) continue;
+
+      const fields: Record<string, unknown> = {};
+      let timestamp = '';
+      let message = '';
+      let source = '';
+      let id = '';
+
+      for (let j = 0; j < headers.length; j++) {
+        const header = headers[j].toLowerCase();
+        const value = values[j];
+
+        if (header === 'timestamp') {
+          timestamp = value;
+        } else if (header === 'message') {
+          message = value;
+        } else if (header === 'source') {
+          source = value;
+        } else if (header === '_id' || header === 'id') {
+          id = value;
+        } else {
+          fields[header] = value;
+        }
+      }
+
+      messages.push({
+        message: {
+          _id: id || `msg_${i}`,
+          timestamp,
+          message,
+          source,
+          fields,
+        },
+        index: 'graylog',
+      });
+    }
+
+    return {
+      messages,
+      total_results: messages.length,
+      from: messages[0]?.message.timestamp || new Date().toISOString(),
+      to: messages[messages.length - 1]?.message.timestamp || new Date().toISOString(),
+    };
+  }
+
+  private parseCSVLine(line: string): string[] {
+    const result: string[] = [];
+    let current = '';
+    let inQuotes = false;
+
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      const nextChar = line[i + 1];
+
+      if (char === '"') {
+        if (inQuotes && nextChar === '"') {
+          // Escaped quote
+          current += '"';
+          i++; // Skip next quote
+        } else {
+          // Toggle quote state
+          inQuotes = !inQuotes;
+        }
+      } else if (char === ',' && !inQuotes) {
+        // Field separator
+        result.push(current);
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+
+    // Add last field
+    if (current || line.endsWith(',')) {
+      result.push(current);
+    }
+
+    return result;
   }
 
   private parseGraylogMessage(message: GraylogMessage): LogEvent {
