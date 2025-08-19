@@ -1,13 +1,13 @@
 {
   "name": "@liquescent/log-correlator-query-parser",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "PromQL-style query parser for log correlation",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "generate-parser": "peggy --format commonjs -o src/generated/parser.js grammar/logql.peggy",
     "prebuild": "npm run generate-parser",
-    "build": "tsc",
+    "build": "tsc && cp -r src/generated dist/generated",
     "clean": "rm -rf dist",
     "clean:all": "rm -rf dist src/generated",
     "test": "jest"

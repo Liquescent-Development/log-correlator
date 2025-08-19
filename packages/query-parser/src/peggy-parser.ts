@@ -32,12 +32,16 @@ interface JoinInfo {
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 let generatedParser: GeneratedParser;
 try {
-  // Try loading from dist (for built package)
+  // Try loading from the same directory structure (works in both src and dist)
   generatedParser = require("./generated/parser.js");
-} catch {
-  // Try loading from src (for tests)
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  generatedParser = require("../src/generated/parser.js");
+} catch (e) {
+  // Fallback for different directory structures
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    generatedParser = require("../generated/parser.js");
+  } catch (e2) {
+    throw new Error("Failed to load generated parser. Please ensure the package was built correctly.");
+  }
 }
 
 // interface ParseError {
