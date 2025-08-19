@@ -147,28 +147,28 @@ The Graylog adapter supports connecting through SOCKS4/SOCKS5 proxies, which is 
 
 ```javascript
 const adapter = new GraylogAdapter({
-  url: 'http://graylog.internal:9000',
-  apiToken: 'your-token',
-  apiVersion: 'v6',
+  url: "http://graylog.internal:9000",
+  apiToken: "your-token",
+  apiVersion: "v6",
   proxy: {
-    host: '127.0.0.1',
+    host: "127.0.0.1",
     port: 1080,
     type: 5, // SOCKS5 (default) or 4 for SOCKS4
-    username: 'proxyuser', // Optional
-    password: 'proxypass'  // Optional
-  }
+    username: "proxyuser", // Optional
+    password: "proxypass", // Optional
+  },
 });
 ```
 
 ### Proxy Configuration Options
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `proxy.host` | string | required | SOCKS proxy hostname or IP |
-| `proxy.port` | number | required | SOCKS proxy port |
-| `proxy.type` | 4 \| 5 | 5 | SOCKS protocol version |
-| `proxy.username` | string | - | Username for proxy authentication |
-| `proxy.password` | string | - | Password for proxy authentication |
+| Option           | Type   | Default  | Description                       |
+| ---------------- | ------ | -------- | --------------------------------- |
+| `proxy.host`     | string | required | SOCKS proxy hostname or IP        |
+| `proxy.port`     | number | required | SOCKS proxy port                  |
+| `proxy.type`     | 4 \| 5 | 5        | SOCKS protocol version            |
+| `proxy.username` | string | -        | Username for proxy authentication |
+| `proxy.password` | string | -        | Password for proxy authentication |
 
 ### Use Cases
 

@@ -40,7 +40,9 @@ try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     generatedParser = require("../generated/parser.js");
   } catch (e2) {
-    throw new Error("Failed to load generated parser. Please ensure the package was built correctly.");
+    throw new Error(
+      "Failed to load generated parser. Please ensure the package was built correctly.",
+    );
   }
 }
 
