@@ -75,8 +75,9 @@ const adapter = new GraylogAdapter({
 - `GET /api/streams` - List available streams
 
 The v6 API requires a specific nested request structure with these key differences:
+
 - Uses `query_string.query_string` (nested structure) instead of a simple query parameter
-- Timerange uses `type: "relative"` with `from: <seconds>` format 
+- Timerange uses `type: "relative"` with `from: <seconds>` format
 - Uses `fields_in_order` instead of `fields` for field specification
 - Always returns CSV format (Accept: "text/csv") instead of JSON
 - Supports optional `streams` array for filtering by stream IDs
@@ -102,6 +103,7 @@ The adapter sends requests to `/api/views/search/messages` with this exact struc
 ```
 
 **Key Requirements:**
+
 - The `query_string.query_string` nesting is required (not a typo)
 - `timerange.from` must be in seconds (e.g., 300 for last 5 minutes)
 - `timerange.type` must be "relative" for relative time queries
@@ -217,11 +219,13 @@ const adapter = new GraylogAdapter({
 ### Graylog 6.x Permissions
 
 For Graylog 6.x, ensure your user has access to:
+
 - The Views Search API (`/api/views/search/messages`)
 - Read permissions on the streams you want to query
 - Export permissions if your Graylog deployment restricts CSV exports
 
 The v6 API is significantly different from the legacy Universal Search API:
+
 - It only returns CSV data (not JSON)
 - The request structure uses nested `query_string.query_string` format
 - Timerange format is different (relative seconds vs. absolute timestamps)
@@ -233,10 +237,10 @@ When upgrading from legacy to v6 API, simply change the `apiVersion` setting:
 
 ```javascript
 // Before (Graylog 2.x-5.x)
-apiVersion: "legacy"
+apiVersion: "legacy";
 
-// After (Graylog 6.x+)  
-apiVersion: "v6"
+// After (Graylog 6.x+)
+apiVersion: "v6";
 ```
 
 The adapter handles all the underlying API differences automatically.

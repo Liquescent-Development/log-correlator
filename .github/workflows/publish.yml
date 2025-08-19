@@ -3,17 +3,17 @@ name: Publish to npm
 on:
   push:
     tags:
-      - 'v*.*.*'  # Trigger on version tags like v0.0.1, v1.2.3
-  workflow_dispatch:  # Allow manual trigger from GitHub UI
+      - "v*.*.*" # Trigger on version tags like v0.0.1, v1.2.3
+  workflow_dispatch: # Allow manual trigger from GitHub UI
     inputs:
       version:
-        description: 'Version to publish (e.g., 0.0.1)'
+        description: "Version to publish (e.g., 0.0.1)"
         required: true
         type: string
       tag:
-        description: 'npm tag (latest, beta, next)'
+        description: "npm tag (latest, beta, next)"
         required: true
-        default: 'latest'
+        default: "latest"
         type: choice
         options:
           - latest
@@ -26,23 +26,23 @@ jobs:
     name: Build and Publish
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # Need write permission to create releases
-      packages: write  # For GitHub Packages
-      id-token: write  # For npm provenance
-    
+      contents: write # Need write permission to create releases
+      packages: write # For GitHub Packages
+      id-token: write # For npm provenance
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Full history for changelog generation
-      
+          fetch-depth: 0 # Full history for changelog generation
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          registry-url: 'https://registry.npmjs.org'
-          cache: 'npm'
-      
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+          cache: "npm"
+
       - name: Verify version consistency
         run: |
           # Extract version from tag or input
@@ -51,9 +51,9 @@ jobs:
           else
             VERSION="${{ github.event.inputs.version }}"
           fi
-          
+
           echo "Publishing version: $VERSION"
-          
+
           # Verify all packages have this version
           for pkg in packages/*/package.json packages/adapters/*/package.json; do
             if [ -f "$pkg" ]; then
@@ -69,25 +69,25 @@ jobs:
               echo "✅ $PKG_NAME: $PKG_VERSION"
             fi
           done
-      
+
       - name: Install dependencies
         run: npm ci
-      
+
       - name: Build all packages
         run: npm run build
-      
+
       # Skip tests during publish - they've already passed in PR checks
       # Tests would fail here because packages reference each other with file:
       # but haven't been published yet
-      
+
       - name: Run linter
         run: npm run lint
-      
+
       - name: Generate changelog
         run: |
           node tools/changelog.js --unreleased > RELEASE_NOTES.md
           cat RELEASE_NOTES.md
-      
+
       - name: Configure npm authentication
         run: |
           echo "//registry.npmjs.org/:_authToken=\${NODE_AUTH_TOKEN}" > ~/.npmrc
@@ -97,7 +97,7 @@ jobs:
           npm access ls-packages 2>/dev/null || echo "First time publishing to @liquescent scope"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      
+
       - name: Prepare packages for npm publish
         run: |
           # Get version from tag or input
@@ -106,12 +106,12 @@ jobs:
           else
             VERSION="${{ github.event.inputs.version }}"
           fi
-          
+
           echo "Preparing packages for version $VERSION"
-          
+
           # Create temporary directory for publishing
           mkdir -p temp-publish
-          
+
           # Function to prepare a package for publishing
           prepare_package() {
             local src_dir=$1
@@ -153,14 +153,14 @@ jobs:
             
             cd ../..
           }
-          
+
           # Prepare all packages
           prepare_package "packages/query-parser" "query-parser"
           prepare_package "packages/core" "core"
           prepare_package "packages/adapters/loki" "loki"
           prepare_package "packages/adapters/graylog" "graylog"
           prepare_package "packages/adapters/promql" "promql"
-      
+
       - name: Publish packages
         run: |
           # Determine tag
@@ -175,37 +175,37 @@ jobs:
           else
             TAG="${{ github.event.inputs.tag }}"
           fi
-          
+
           echo "Publishing with tag: $TAG"
-          
+
           # Publish from temp directory in dependency order
           # Use set -e to stop on first error
           set -e
-          
+
           # 1. Query parser (no internal deps)
           echo "Publishing @liquescent/log-correlator-query-parser..."
           cd temp-publish/query-parser && npm publish --access public --tag $TAG && cd ../..
-          
+
           # 2. Core (depends on query-parser)
           echo "Publishing @liquescent/log-correlator-core..."
           cd temp-publish/core && npm publish --access public --tag $TAG && cd ../..
-          
+
           # 3. Adapters (depend on core)
           echo "Publishing @liquescent/log-correlator-loki..."
           cd temp-publish/loki && npm publish --access public --tag $TAG && cd ../..
-          
+
           echo "Publishing @liquescent/log-correlator-graylog..."
           cd temp-publish/graylog && npm publish --access public --tag $TAG && cd ../..
-          
+
           echo "Publishing @liquescent/log-correlator-promql..."
           cd temp-publish/promql && npm publish --access public --tag $TAG && cd ../..
-          
+
           echo "✅ All packages published successfully!"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      
+
       - name: Check if release exists
-        if: github.event_name == 'push'  # Only for tag pushes
+        if: github.event_name == 'push' # Only for tag pushes
         id: check_release
         run: |
           TAG_NAME="${{ github.ref_name }}"
@@ -218,7 +218,7 @@ jobs:
           fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      
+
       - name: Create GitHub Release
         if: github.event_name == 'push' && steps.check_release.outputs.exists == 'false'
         uses: softprops/action-gh-release@v1
@@ -229,7 +229,7 @@ jobs:
           draft: false
           prerelease: ${{ startsWith(github.ref, 'refs/tags/v0.') }}
           token: ${{ secrets.GITHUB_TOKEN }}
-      
+
       - name: Notify success
         if: success()
         run: |

@@ -781,28 +781,31 @@ const v6Adapter = new GraylogAdapter({
 // 2. Test v6 API access manually
 // The v6 API uses POST with specific JSON structure:
 const testV6API = async () => {
-  const response = await fetch("http://localhost:9000/api/views/search/messages", {
-    method: "POST",
-    headers: {
-      "Authorization": "Bearer <YOUR_API_TOKEN>",
-      "Content-Type": "application/json",
-      "Accept": "text/csv", // v6 always returns CSV
-      "X-Requested-By": "log-correlator",
+  const response = await fetch(
+    "http://localhost:9000/api/views/search/messages",
+    {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer <YOUR_API_TOKEN>",
+        "Content-Type": "application/json",
+        Accept: "text/csv", // v6 always returns CSV
+        "X-Requested-By": "log-correlator",
+      },
+      body: JSON.stringify({
+        query_string: {
+          query_string: "*", // Note: nested structure required
+        },
+        timerange: {
+          type: "relative",
+          from: 300, // seconds ago, not milliseconds
+        },
+        fields_in_order: ["timestamp", "source", "message", "_id"],
+        limit: 100,
+        chunk_size: 100,
+      }),
     },
-    body: JSON.stringify({
-      query_string: {
-        query_string: "*", // Note: nested structure required
-      },
-      timerange: {
-        type: "relative",
-        from: 300, // seconds ago, not milliseconds
-      },
-      fields_in_order: ["timestamp", "source", "message", "_id"],
-      limit: 100,
-      chunk_size: 100,
-    }),
-  });
-  
+  );
+
   if (response.ok) {
     const csvData = await response.text();
     console.log("v6 API working, received CSV data");

@@ -30,7 +30,7 @@ updates:
       - "javascript"
     reviewers:
       - "@liquescent/maintainers"
-    
+
   # GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"

@@ -226,7 +226,7 @@ export class GraylogAdapter implements DataSourceAdapter {
 
     // Calculate time window in seconds for relative timerange
     const range = (params.range as number) || 300; // Default 5 minutes
-    
+
     // Graylog v6 views API expects this exact structure with nested query_string
     const requestBody: any = {
       query_string: {
@@ -292,14 +292,14 @@ export class GraylogAdapter implements DataSourceAdapter {
   private parseJSONResponse(data: any): GraylogSearchResponse {
     // Handle the JSON response format from /api/views/search/messages
     const messages: Array<{ message: GraylogMessage; index: string }> = [];
-    
+
     // The response structure varies, but typically includes a messages array or results
     const messageList = data.messages || data.results || data.datarows || [];
-    
+
     for (const item of messageList) {
       // Extract message data - structure depends on Graylog version
       const msg = item.message || item;
-      
+
       messages.push({
         message: {
           _id: msg._id || msg.id || `msg_${messages.length}`,
@@ -315,7 +315,8 @@ export class GraylogAdapter implements DataSourceAdapter {
     return {
       messages,
       total_results: data.total_results || data.total || messages.length,
-      from: data.from || data.effective_timerange?.from || new Date().toISOString(),
+      from:
+        data.from || data.effective_timerange?.from || new Date().toISOString(),
       to: data.to || data.effective_timerange?.to || new Date().toISOString(),
     };
   }
