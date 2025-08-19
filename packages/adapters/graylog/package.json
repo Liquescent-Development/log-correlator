@@ -18,7 +18,7 @@
   "license": "AGPL-3.0",
   "dependencies": {
     "@liquescent/log-correlator-core": "file:../../core",
-    "node-fetch": "^2.7.0",
+    "node-fetch": "^3.3.2",
     "socks-proxy-agent": "^8.0.5"
   },
   "devDependencies": {
