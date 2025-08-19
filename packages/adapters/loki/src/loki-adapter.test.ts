@@ -78,6 +78,37 @@ describe("LokiAdapter", () => {
       adapter = new LokiAdapter(customOptions);
       expect(adapter.getName()).toBe("loki");
     });
+
+    it("should create adapter with SOCKS5 proxy configuration", () => {
+      const proxyOptions = {
+        ...defaultOptions,
+        proxy: {
+          host: "127.0.0.1",
+          port: 1080,
+          username: "proxyuser",
+          password: "proxypass",
+          type: 5 as const,
+        },
+      };
+
+      adapter = new LokiAdapter(proxyOptions);
+      expect(adapter.getName()).toBe("loki");
+      // The proxy agent is created internally
+    });
+
+    it("should create adapter with SOCKS4 proxy without auth", () => {
+      const proxyOptions = {
+        ...defaultOptions,
+        proxy: {
+          host: "proxy.example.com",
+          port: 8080,
+          type: 4 as const,
+        },
+      };
+
+      adapter = new LokiAdapter(proxyOptions);
+      expect(adapter.getName()).toBe("loki");
+    });
   });
 
   describe("validateQuery", () => {

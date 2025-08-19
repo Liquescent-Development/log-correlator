@@ -5,6 +5,7 @@ import {
   StreamOptions,
 } from "@liquescent/log-correlator-core";
 import fetch, { RequestInit } from "node-fetch";
+import { SocksProxyAgent } from "socks-proxy-agent";
 
 export interface PromQLAdapterOptions {
   url: string;
@@ -14,6 +15,13 @@ export interface PromQLAdapterOptions {
   pollInterval?: number;
   timeout?: number;
   maxRetries?: number;
+  proxy?: {
+    host: string;
+    port: number;
+    username?: string;
+    password?: string;
+    type?: 4 | 5; // SOCKS4 or SOCKS5, defaults to 5
+  };
 }
 
 interface PrometheusQueryResponse {
@@ -38,6 +46,7 @@ interface PrometheusRangeQueryParams {
 export class PromQLAdapter implements DataSourceAdapter {
   private authHeader: string;
   private abortController?: AbortController;
+  private proxyAgent?: SocksProxyAgent;
 
   constructor(private options: PromQLAdapterOptions) {
     // Setup authentication
@@ -50,6 +59,14 @@ export class PromQLAdapter implements DataSourceAdapter {
       this.authHeader = `Basic ${credentials}`;
     } else {
       this.authHeader = "";
+    }
+
+    // Create SOCKS proxy agent if configured
+    if (this.options.proxy) {
+      const { host, port, username, password, type = 5 } = this.options.proxy;
+      const auth = username && password ? `${username}:${password}@` : "";
+      const proxyUrl = `socks${type}://${auth}${host}:${port}`;
+      this.proxyAgent = new SocksProxyAgent(proxyUrl);
     }
   }
 
@@ -174,6 +191,10 @@ export class PromQLAdapter implements DataSourceAdapter {
 
     if (this.abortController) {
       fetchOptions.signal = this.abortController.signal;
+    }
+
+    if (this.proxyAgent) {
+      (fetchOptions as any).agent = this.proxyAgent;
     }
 
     const response = await fetch(`${url}?${queryParams}`, fetchOptions);
@@ -331,6 +352,10 @@ export class PromQLAdapter implements DataSourceAdapter {
         ...fetchOptions.headers,
         Authorization: this.authHeader,
       };
+    }
+
+    if (this.proxyAgent) {
+      (fetchOptions as any).agent = this.proxyAgent;
     }
 
     try {

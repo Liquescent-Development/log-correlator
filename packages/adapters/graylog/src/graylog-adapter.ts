@@ -4,6 +4,7 @@ import {
   CorrelationError,
 } from "@liquescent/log-correlator-core";
 import fetch, { RequestInit } from "node-fetch";
+import { SocksProxyAgent } from "socks-proxy-agent";
 
 export interface GraylogAdapterOptions {
   url: string;
@@ -15,6 +16,13 @@ export interface GraylogAdapterOptions {
   maxRetries?: number;
   streamId?: string;
   apiVersion?: "legacy" | "v6"; // 'legacy' for universal search, 'v6' for views API
+  proxy?: {
+    host: string;
+    port: number;
+    username?: string;
+    password?: string;
+    type?: 4 | 5; // SOCKS4 or SOCKS5, defaults to 5
+  };
 }
 
 interface GraylogMessage {
@@ -63,6 +71,7 @@ interface GraylogViewsSearchRequest {
 export class GraylogAdapter implements DataSourceAdapter {
   private activeStreams: Set<AbortController> = new Set();
   private authHeader: string;
+  private proxyAgent?: SocksProxyAgent;
 
   constructor(private options: GraylogAdapterOptions) {
     this.options = {
@@ -86,6 +95,14 @@ export class GraylogAdapter implements DataSourceAdapter {
         "Graylog adapter requires either apiToken or username/password",
         "AUTH_REQUIRED",
       );
+    }
+
+    // Create SOCKS proxy agent if configured
+    if (this.options.proxy) {
+      const { host, port, username, password, type = 5 } = this.options.proxy;
+      const auth = username && password ? `${username}:${password}@` : "";
+      const proxyUrl = `socks${type}://${auth}${host}:${port}`;
+      this.proxyAgent = new SocksProxyAgent(proxyUrl);
     }
   }
 
@@ -196,6 +213,7 @@ export class GraylogAdapter implements DataSourceAdapter {
         "X-Requested-By": "log-correlator",
       },
       signal,
+      agent: this.proxyAgent as any,
     };
 
     const response = await fetch(`${url}?${queryParams}`, fetchOptions);
@@ -251,6 +269,7 @@ export class GraylogAdapter implements DataSourceAdapter {
       },
       body: JSON.stringify(requestBody),
       signal,
+      agent: this.proxyAgent as any,
     };
 
     const response = await fetch(url, fetchOptions);
@@ -589,6 +608,7 @@ export class GraylogAdapter implements DataSourceAdapter {
           Accept: "application/json",
           "X-Requested-By": "log-correlator",
         },
+        agent: this.proxyAgent as any,
       });
 
       if (!response.ok) {

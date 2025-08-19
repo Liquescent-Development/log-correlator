@@ -5,6 +5,7 @@ import {
 } from "@liquescent/log-correlator-core";
 import fetch from "node-fetch";
 import WebSocket from "ws";
+import { SocksProxyAgent } from "socks-proxy-agent";
 
 export interface LokiAdapterOptions {
   url: string;
@@ -14,6 +15,13 @@ export interface LokiAdapterOptions {
   maxRetries?: number;
   authToken?: string;
   headers?: Record<string, string>;
+  proxy?: {
+    host: string;
+    port: number;
+    username?: string;
+    password?: string;
+    type?: 4 | 5; // SOCKS4 or SOCKS5, defaults to 5
+  };
 }
 
 interface LokiQueryResponse {
@@ -34,6 +42,7 @@ export class LokiAdapter implements DataSourceAdapter {
   private heartbeatInterval?: NodeJS.Timeout;
   private reconnectTimeout?: NodeJS.Timeout;
   private wsConnectionPromise?: Promise<void>;
+  private proxyAgent?: SocksProxyAgent;
 
   constructor(private options: LokiAdapterOptions) {
     this.options = {
@@ -43,6 +52,14 @@ export class LokiAdapter implements DataSourceAdapter {
       maxRetries: 3,
       ...options,
     };
+
+    // Create SOCKS proxy agent if configured
+    if (this.options.proxy) {
+      const { host, port, username, password, type = 5 } = this.options.proxy;
+      const auth = username && password ? `${username}:${password}@` : "";
+      const proxyUrl = `socks${type}://${auth}${host}:${port}`;
+      this.proxyAgent = new SocksProxyAgent(proxyUrl);
+    }
   }
 
   getName(): string {
@@ -118,10 +135,17 @@ export class LokiAdapter implements DataSourceAdapter {
     const wsUrl = this.options.url.replace(/^http/, "ws");
     const fullUrl = `${wsUrl}/loki/api/v1/tail?query=${encodeURIComponent(query)}`;
 
-    const ws = new WebSocket(fullUrl, {
+    const wsOptions: any = {
       headers: this.buildHeaders(),
       handshakeTimeout: this.options.timeout,
-    });
+    };
+
+    // Add proxy agent for WebSocket if configured
+    if (this.proxyAgent) {
+      wsOptions.agent = this.proxyAgent;
+    }
+
+    const ws = new WebSocket(fullUrl, wsOptions);
 
     this.ws = ws;
 
@@ -311,6 +335,7 @@ export class LokiAdapter implements DataSourceAdapter {
             headers: this.buildHeaders(),
             signal: controller.signal,
             timeout: this.options.timeout,
+            agent: this.proxyAgent,
           } as any);
 
           if (!response.ok) {
@@ -452,6 +477,7 @@ export class LokiAdapter implements DataSourceAdapter {
       const response = await fetch(url, {
         headers: this.buildHeaders(),
         timeout: this.options.timeout,
+        agent: this.proxyAgent,
       } as any);
 
       if (!response.ok) {
