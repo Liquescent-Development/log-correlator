@@ -30,13 +30,21 @@ const legacyAdapter = new GraylogAdapter({
   timeout: 15000, // 15 second timeout
 });
 
-// For Graylog 6.x+
+// For Graylog 6.x+ with stream filtering by name
 const v6Adapter = new GraylogAdapter({
   url: "http://graylog.example.com:9000",
   apiToken: "your-api-token", // API token recommended for v6
   apiVersion: "v6", // Required for Graylog 6.x
   pollInterval: 2000,
-  streamId: "stream-id", // Optional: filter by specific stream
+  streamName: "Application Logs", // Filter by human-readable stream name
+});
+
+// Or use stream ID directly if you know it (24-char MongoDB ObjectId)
+const v6AdapterWithId = new GraylogAdapter({
+  url: "http://graylog.example.com:9000",
+  apiToken: "your-api-token",
+  apiVersion: "v6",
+  streamId: "507f1f77bcf86cd799439011", // Must be valid 24-char hex string
 });
 ```
 
@@ -160,23 +168,25 @@ for await (const event of engine.correlate(query)) {
 - **Polling-based streaming**: Continuously polls for new log messages
 - **Automatic retry**: Handles transient failures with exponential backoff
 - **Join key extraction**: Automatically extracts correlation IDs from log messages
-- **Stream filtering**: Filter logs by Graylog stream ID
+- **Stream filtering**: Filter logs by stream name or ID
 - **Time window support**: Configure time ranges for log queries
+- **Stream name resolution**: Automatically converts stream names to IDs
 
 ## Options
 
-| Option         | Type             | Default  | Description                      |
-| -------------- | ---------------- | -------- | -------------------------------- |
-| `url`          | string           | required | Graylog server URL               |
-| `username`     | string           | -        | Username for basic auth          |
-| `password`     | string           | -        | Password for basic auth          |
-| `apiToken`     | string           | -        | API token for token auth         |
-| `apiVersion`   | 'legacy' \| 'v6' | 'legacy' | API version to use               |
-| `pollInterval` | number           | 2000     | Polling interval in milliseconds |
-| `timeout`      | number           | 15000    | Request timeout in milliseconds  |
-| `maxRetries`   | number           | 3        | Maximum retry attempts           |
-| `streamId`     | string           | -        | Filter by Graylog stream ID      |
-| `proxy`        | object           | -        | SOCKS proxy configuration        |
+| Option         | Type             | Default  | Description                                     |
+| -------------- | ---------------- | -------- | ----------------------------------------------- |
+| `url`          | string           | required | Graylog server URL                              |
+| `username`     | string           | -        | Username for basic auth                         |
+| `password`     | string           | -        | Password for basic auth                         |
+| `apiToken`     | string           | -        | API token for token auth                        |
+| `apiVersion`   | 'legacy' \| 'v6' | 'legacy' | API version to use                              |
+| `pollInterval` | number           | 2000     | Polling interval in milliseconds                |
+| `timeout`      | number           | 15000    | Request timeout in milliseconds                 |
+| `maxRetries`   | number           | 3        | Maximum retry attempts                          |
+| `streamId`     | string           | -        | Stream ID (24-char MongoDB ObjectId)            |
+| `streamName`   | string           | -        | Stream name (automatically resolved to ID)      |
+| `proxy`        | object           | -        | SOCKS proxy configuration                       |
 
 ## SOCKS Proxy Support
 

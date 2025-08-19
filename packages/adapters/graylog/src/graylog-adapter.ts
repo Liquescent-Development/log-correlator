@@ -14,7 +14,8 @@ export interface GraylogAdapterOptions {
   pollInterval?: number;
   timeout?: number;
   maxRetries?: number;
-  streamId?: string;
+  streamId?: string; // MongoDB ObjectId of the stream (24 hex chars)
+  streamName?: string; // Human-readable stream name (will be resolved to ID)
   apiVersion?: "legacy" | "v6"; // 'legacy' for universal search, 'v6' for views API
   proxy?: {
     host: string;
@@ -61,6 +62,8 @@ export class GraylogAdapter implements DataSourceAdapter {
   private activeStreams: Set<AbortController> = new Set();
   private authHeader: string;
   private proxyAgent?: SocksProxyAgent;
+  private resolvedStreamId?: string;
+  private streamResolutionPromise?: Promise<void>;
 
   constructor(private options: GraylogAdapterOptions) {
     this.options = {
@@ -93,6 +96,73 @@ export class GraylogAdapter implements DataSourceAdapter {
       const proxyUrl = `socks${type}://${auth}${host}:${port}`;
       this.proxyAgent = new SocksProxyAgent(proxyUrl);
     }
+
+    // Resolve stream name to ID if needed
+    if (this.options.streamName && !this.options.streamId) {
+      this.streamResolutionPromise = this.resolveStreamName();
+    }
+  }
+
+  /**
+   * Resolve stream name to stream ID
+   */
+  private async resolveStreamName(): Promise<void> {
+    try {
+      const url = `${this.options.url}/api/streams`;
+      const response = await fetch(url, {
+        headers: {
+          Authorization: this.authHeader,
+          Accept: "application/json",
+        },
+        agent: this.proxyAgent as any,
+      });
+
+      if (!response.ok) {
+        console.warn(
+          `Failed to fetch streams for name resolution: ${response.statusText}`,
+        );
+        return;
+      }
+
+      const data = await response.json();
+      const streams = data.streams || [];
+      
+      // Find stream by name (case-insensitive)
+      const stream = streams.find(
+        (s: any) => 
+          s.title?.toLowerCase() === this.options.streamName?.toLowerCase() ||
+          s.name?.toLowerCase() === this.options.streamName?.toLowerCase()
+      );
+
+      if (stream) {
+        this.resolvedStreamId = stream.id;
+        console.log(
+          `Resolved stream name "${this.options.streamName}" to ID: ${this.resolvedStreamId}`,
+        );
+      } else {
+        console.warn(
+          `Stream "${this.options.streamName}" not found. Available streams: ${
+            streams.map((s: any) => s.title || s.name).join(", ")
+          }`,
+        );
+      }
+    } catch (error) {
+      console.warn(`Failed to resolve stream name: ${error}`);
+    }
+  }
+
+  /**
+   * Get the effective stream ID (resolved from name or direct ID)
+   */
+  private async getEffectiveStreamId(): Promise<string | undefined> {
+    // Wait for stream name resolution if in progress
+    if (this.streamResolutionPromise) {
+      await this.streamResolutionPromise;
+      this.streamResolutionPromise = undefined; // Clear after resolution
+    }
+
+    // Return resolved ID or original streamId
+    return this.resolvedStreamId || this.options.streamId;
   }
 
   getName(): string {
@@ -117,6 +187,9 @@ export class GraylogAdapter implements DataSourceAdapter {
     try {
       let lastMessageId: string | null = null;
       const timeWindowMs = this.parseTimeRange(timeRange);
+      
+      // Get effective stream ID once at the start
+      const effectiveStreamId = await this.getEffectiveStreamId();
 
       while (!controller.signal.aborted) {
         const now = new Date();
@@ -131,8 +204,8 @@ export class GraylogAdapter implements DataSourceAdapter {
           fields: "_id,message,timestamp,source,*",
         };
 
-        if (this.options.streamId) {
-          searchParams["filter"] = `streams:${this.options.streamId}`;
+        if (effectiveStreamId) {
+          searchParams["filter"] = `streams:${effectiveStreamId}`;
         }
 
         try {
@@ -242,8 +315,16 @@ export class GraylogAdapter implements DataSourceAdapter {
     };
 
     // Add streams filter if configured
-    if (this.options.streamId) {
-      requestBody.streams = [this.options.streamId];
+    const effectiveStreamId = await this.getEffectiveStreamId();
+    if (effectiveStreamId) {
+      // Validate that streamId looks like a MongoDB ObjectId (24 hex characters)
+      if (/^[a-f0-9]{24}$/i.test(effectiveStreamId)) {
+        requestBody.streams = [effectiveStreamId];
+      } else {
+        console.warn(
+          `Warning: Invalid streamId "${effectiveStreamId}" - must be 24 hex characters. Ignoring stream filter.`,
+        );
+      }
     }
 
     const fetchOptions: RequestInit = {
