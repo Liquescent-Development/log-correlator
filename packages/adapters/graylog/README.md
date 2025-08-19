@@ -139,6 +139,43 @@ for await (const event of engine.correlate(query)) {
 | `timeout`      | number           | 15000    | Request timeout in milliseconds  |
 | `maxRetries`   | number           | 3        | Maximum retry attempts           |
 | `streamId`     | string           | -        | Filter by Graylog stream ID      |
+| `proxy`        | object           | -        | SOCKS proxy configuration        |
+
+## SOCKS Proxy Support
+
+The Graylog adapter supports connecting through SOCKS4/SOCKS5 proxies, which is useful for accessing Graylog instances in restricted network environments:
+
+```javascript
+const adapter = new GraylogAdapter({
+  url: 'http://graylog.internal:9000',
+  apiToken: 'your-token',
+  apiVersion: 'v6',
+  proxy: {
+    host: '127.0.0.1',
+    port: 1080,
+    type: 5, // SOCKS5 (default) or 4 for SOCKS4
+    username: 'proxyuser', // Optional
+    password: 'proxypass'  // Optional
+  }
+});
+```
+
+### Proxy Configuration Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `proxy.host` | string | required | SOCKS proxy hostname or IP |
+| `proxy.port` | number | required | SOCKS proxy port |
+| `proxy.type` | 4 \| 5 | 5 | SOCKS protocol version |
+| `proxy.username` | string | - | Username for proxy authentication |
+| `proxy.password` | string | - | Password for proxy authentication |
+
+### Use Cases
+
+- Accessing internal Graylog instances from external networks
+- Connecting through bastion hosts or jump servers
+- Complying with enterprise security policies
+- Tunneling through firewalls in restricted environments
 
 ## Note on Permissions
 
