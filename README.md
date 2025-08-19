@@ -7,6 +7,7 @@ A TypeScript npm package that enables real-time correlation of log streams from 
 - **Real-time Stream Processing**: Handle live log streams from multiple sources simultaneously
 - **PromQL-style Query Language**: Familiar syntax for join operations and filtering
 - **Multiple Data Sources**: Built-in adapters for Loki and Graylog (supports v2.x-6.x+)
+- **SOCKS Proxy Support**: Connect through SOCKS4/SOCKS5 proxies for secure network environments
 - **JavaScript-First API**: Easy consumption from vanilla JavaScript/Node.js
 - **Memory Efficient**: Bounded buffers with configurable time windows
 - **Electron Compatible**: Designed for integration with Electron applications
@@ -117,6 +118,41 @@ loki({job="nginx"})[5m]
 loki({service="frontend"})[5m]
   and on(request_id) within(30s)
   loki({service="backend"})[5m]
+```
+
+## SOCKS Proxy Configuration
+
+All adapters support connecting through SOCKS4/SOCKS5 proxies, useful for secure or restricted network environments:
+
+```javascript
+const { LokiAdapter } = require("@liquescent/log-correlator-loki");
+
+const adapter = new LokiAdapter({
+  url: "http://loki.internal:3100",
+  proxy: {
+    host: "127.0.0.1",
+    port: 1080,
+    type: 5, // SOCKS5 (default) or 4 for SOCKS4
+    username: "proxyuser", // Optional authentication
+    password: "proxypass",
+  },
+});
+```
+
+This works identically for Graylog and PromQL adapters:
+
+```javascript
+const { GraylogAdapter } = require("@liquescent/log-correlator-graylog");
+
+const graylogAdapter = new GraylogAdapter({
+  url: "http://graylog.internal:9000",
+  apiToken: "your-token",
+  proxy: {
+    host: "proxy.company.com",
+    port: 8080,
+    type: 5,
+  },
+});
 ```
 
 ## Development
