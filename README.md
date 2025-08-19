@@ -58,7 +58,7 @@ for await (const correlation of engine.correlate(query)) {
 
 ### Graylog 6.x Example
 
-For Graylog 6.x deployments where universal search API access may be restricted:
+For Graylog 6.x deployments, use the Views API which supports advanced features and returns CSV data:
 
 ```javascript
 const { CorrelationEngine } = require("@liquescent/log-correlator-core");
@@ -75,7 +75,7 @@ engine.addAdapter(
   new GraylogAdapter({
     url: "http://graylog.example.com:9000",
     apiToken: "your-api-token",
-    apiVersion: "v6", // Use Views API instead of Universal Search
+    apiVersion: "v6", // Required for Graylog 6.x (uses CSV responses)
     pollInterval: 2000,
   }),
 );

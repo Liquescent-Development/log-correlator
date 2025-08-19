@@ -53,20 +53,9 @@ interface GraylogSearchResponse {
 //   [key: string]: unknown; // Additional fields
 // }
 
-interface GraylogViewsSearchRequest {
-  chunk_size?: number;
-  timerange: {
-    type: "relative";
-    from: number; // seconds
-  };
-  streams?: string[];
-  limit?: number;
-  time_zone?: string;
-  fields_in_order?: string[];
-  query_string: {
-    query_string: string;
-  };
-}
+// Note: GraylogViewsSearchRequest interface removed as we're using
+// the simpler /api/views/search/messages format which is different
+// from the complex views/search/sync endpoint
 
 export class GraylogAdapter implements DataSourceAdapter {
   private activeStreams: Set<AbortController> = new Set();
@@ -236,22 +225,20 @@ export class GraylogAdapter implements DataSourceAdapter {
     const url = `${this.options.url}/api/views/search/messages`;
 
     // Calculate time window in seconds for relative timerange
-    // Graylog v6 expects "from" as seconds ago (e.g., 300 for last 5 minutes)
-    const now = Date.now();
-    const fromTime = new Date(params.from as string).getTime();
-    const timeWindowSec = Math.ceil((now - fromTime) / 1000);
+    const range = (params.range as number) || 300; // Default 5 minutes
 
-    const requestBody: GraylogViewsSearchRequest = {
-      chunk_size: 1000,
-      timerange: {
-        type: "relative",
-        from: timeWindowSec,
-      },
-      limit: (params.limit as number) || 1000,
+    // Graylog v6 views API expects this exact structure with nested query_string
+    const requestBody: any = {
       query_string: {
         query_string: (params.query as string) || "*",
       },
-      fields_in_order: ["timestamp", "source", "message"],
+      timerange: {
+        type: "relative",
+        from: range, // seconds ago
+      },
+      fields_in_order: ["timestamp", "source", "message", "_id"],
+      limit: (params.limit as number) || 1000,
+      chunk_size: 1000,
     };
 
     // Add streams filter if configured
@@ -264,7 +251,7 @@ export class GraylogAdapter implements DataSourceAdapter {
       headers: {
         Authorization: this.authHeader,
         "Content-Type": "application/json",
-        Accept: "text/csv", // Views API returns CSV by default
+        Accept: "text/csv", // v6 API returns CSV by default
         "X-Requested-By": "log-correlator",
       },
       body: JSON.stringify(requestBody),
@@ -275,16 +262,63 @@ export class GraylogAdapter implements DataSourceAdapter {
     const response = await fetch(url, fetchOptions);
 
     if (!response.ok) {
+      // Try to get error details from response body
+      let errorDetails: any = { status: response.status };
+      try {
+        const errorText = await response.text();
+        if (errorText) {
+          try {
+            errorDetails = JSON.parse(errorText);
+          } catch {
+            errorDetails.message = errorText;
+          }
+        }
+      } catch {
+        // Ignore error reading response body
+      }
+
       throw new CorrelationError(
         `Graylog views search failed: ${response.statusText}`,
         "GRAYLOG_SEARCH_ERROR",
-        { status: response.status },
+        errorDetails,
       );
     }
 
-    // Parse CSV response and convert to standard format
+    // Parse CSV response (v6 API returns CSV by default)
     const csvText = await response.text();
     return this.parseCSVResponse(csvText);
+  }
+
+  private parseJSONResponse(data: any): GraylogSearchResponse {
+    // Handle the JSON response format from /api/views/search/messages
+    const messages: Array<{ message: GraylogMessage; index: string }> = [];
+
+    // The response structure varies, but typically includes a messages array or results
+    const messageList = data.messages || data.results || data.datarows || [];
+
+    for (const item of messageList) {
+      // Extract message data - structure depends on Graylog version
+      const msg = item.message || item;
+
+      messages.push({
+        message: {
+          _id: msg._id || msg.id || `msg_${messages.length}`,
+          timestamp: msg.timestamp || new Date().toISOString(),
+          message: msg.message || "",
+          source: msg.source || "",
+          fields: msg.fields || {},
+        },
+        index: msg.index || "graylog",
+      });
+    }
+
+    return {
+      messages,
+      total_results: data.total_results || data.total || messages.length,
+      from:
+        data.from || data.effective_timerange?.from || new Date().toISOString(),
+      to: data.to || data.effective_timerange?.to || new Date().toISOString(),
+    };
   }
 
   private parseCSVResponse(csv: string): GraylogSearchResponse {

@@ -65,6 +65,7 @@ async function main() {
         username: "admin",
         password: "admin",
         pollInterval: 2000,
+        // apiVersion: "v6", // Use for Graylog 6.x+ (requires API token, returns CSV)
       }),
     );
   }

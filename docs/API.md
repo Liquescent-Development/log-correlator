@@ -391,16 +391,41 @@ new GraylogAdapter(options: GraylogAdapterOptions)
 
 ##### Options
 
-| Parameter      | Type   | Default  | Description                                  |
-| -------------- | ------ | -------- | -------------------------------------------- |
-| `url`          | string | required | Graylog server URL                           |
-| `username`     | string | -        | Username for basic auth                      |
-| `password`     | string | -        | Password for basic auth                      |
-| `apiToken`     | string | -        | API token (alternative to username/password) |
-| `pollInterval` | number | 2000     | Polling interval (ms)                        |
-| `timeout`      | number | 15000    | Request timeout (ms)                         |
-| `maxRetries`   | number | 3        | Maximum retry attempts                       |
-| `streamId`     | string | -        | Specific stream ID to query                  |
+| Parameter      | Type             | Default  | Description                                  |
+| -------------- | ---------------- | -------- | -------------------------------------------- |
+| `url`          | string           | required | Graylog server URL                           |
+| `username`     | string           | -        | Username for basic auth                      |
+| `password`     | string           | -        | Password for basic auth                      |
+| `apiToken`     | string           | -        | API token (alternative to username/password) |
+| `apiVersion`   | 'legacy' \| 'v6' | 'legacy' | API version ('v6' for Graylog 6.x+)          |
+| `pollInterval` | number           | 2000     | Polling interval (ms)                        |
+| `timeout`      | number           | 15000    | Request timeout (ms)                         |
+| `maxRetries`   | number           | 3        | Maximum retry attempts                       |
+| `streamId`     | string           | -        | Specific stream ID to query                  |
+
+#### Graylog API Versions
+
+**Legacy API (Graylog 2.x-5.x)**:
+
+- Uses Universal Search API (`/api/search/universal/relative`)
+- Returns JSON responses
+- Simple query parameter structure
+
+**v6 API (Graylog 6.x+)**:
+
+- Uses Views Search API (`/api/views/search/messages`)
+- Returns CSV responses exclusively
+- Requires nested `query_string.query_string` structure
+- Uses relative timerange format (seconds from now)
+
+```javascript
+// For Graylog 6.x+
+const adapter = new GraylogAdapter({
+  url: "http://graylog.example.com:9000",
+  apiToken: "your-api-token",
+  apiVersion: "v6", // Required for Graylog 6.x+
+});
+```
 
 ## Advanced Features
 
