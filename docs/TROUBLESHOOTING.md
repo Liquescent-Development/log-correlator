@@ -209,7 +209,15 @@ const streamAdapter = new GraylogAdapter({
   streamId: "507f1f77bcf86cd799439011", // Limit to specific stream
 });
 
-// 4. Debug authentication
+// 4. Configure for Graylog 6.x+ (Views API)
+const v6Adapter = new GraylogAdapter({
+  url: "http://localhost:9000",
+  apiToken: "<YOUR_API_TOKEN>", // Required for v6
+  apiVersion: "v6", // Use Views API instead of Universal Search
+  pollInterval: 5000,
+});
+
+// 5. Debug authentication
 try {
   const streams = await graylogAdapter.getAvailableStreams();
   console.log("Available streams:", streams);
@@ -752,6 +760,62 @@ for await (const event of adapter.createStream("service:backend", {
 // 3. Validate stream access
 const streams = await adapter.getAvailableStreams();
 console.log("Available Graylog streams:", streams);
+```
+
+### Graylog 6.x API Issues
+
+**Problem**: Queries fail with `GRAYLOG_SEARCH_ERROR` on Graylog 6.x deployments.
+
+**Cause**: Graylog 6.x requires the Views Search API instead of Universal Search API.
+
+**Solutions**:
+
+```javascript
+// 1. Configure for v6 API
+const v6Adapter = new GraylogAdapter({
+  url: "http://localhost:9000",
+  apiToken: "<YOUR_API_TOKEN>", // Required for v6
+  apiVersion: "v6", // Critical: Use v6 API
+});
+
+// 2. Test v6 API access manually
+// The v6 API uses POST with specific JSON structure:
+const testV6API = async () => {
+  const response = await fetch("http://localhost:9000/api/views/search/messages", {
+    method: "POST",
+    headers: {
+      "Authorization": "Bearer <YOUR_API_TOKEN>",
+      "Content-Type": "application/json",
+      "Accept": "text/csv", // v6 always returns CSV
+      "X-Requested-By": "log-correlator",
+    },
+    body: JSON.stringify({
+      query_string: {
+        query_string: "*", // Note: nested structure required
+      },
+      timerange: {
+        type: "relative",
+        from: 300, // seconds ago, not milliseconds
+      },
+      fields_in_order: ["timestamp", "source", "message", "_id"],
+      limit: 100,
+      chunk_size: 100,
+    }),
+  });
+  
+  if (response.ok) {
+    const csvData = await response.text();
+    console.log("v6 API working, received CSV data");
+  } else {
+    console.error("v6 API failed:", response.status, response.statusText);
+  }
+};
+
+// 3. Common v6 migration issues:
+// - Must use API token (username/password may not work)
+// - Response is always CSV, never JSON
+// - Time range format is different (seconds vs ISO strings)
+// - Query structure uses nested query_string.query_string
 ```
 
 ## Configuration Issues

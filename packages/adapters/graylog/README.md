@@ -33,10 +33,10 @@ const legacyAdapter = new GraylogAdapter({
 // For Graylog 6.x+
 const v6Adapter = new GraylogAdapter({
   url: "http://graylog.example.com:9000",
-  apiToken: "your-api-token",
+  apiToken: "your-api-token", // API token recommended for v6
   apiVersion: "v6", // Required for Graylog 6.x
   pollInterval: 2000,
-  streamId: "stream-id", // Optional: filter by stream
+  streamId: "stream-id", // Optional: filter by specific stream
 });
 ```
 
@@ -71,8 +71,42 @@ const adapter = new GraylogAdapter({
 
 ### Views API (Graylog 6.x+)
 
-- `POST /api/views/search/messages` - Search for log messages with CSV export
+- `POST /api/views/search/messages` - Search for log messages with CSV response
 - `GET /api/streams` - List available streams
+
+The v6 API requires a specific nested request structure with these key differences:
+- Uses `query_string.query_string` (nested structure) instead of a simple query parameter
+- Timerange uses `type: "relative"` with `from: <seconds>` format 
+- Uses `fields_in_order` instead of `fields` for field specification
+- Always returns CSV format (Accept: "text/csv") instead of JSON
+- Supports optional `streams` array for filtering by stream IDs
+
+#### Graylog v6 API Request Structure
+
+The adapter sends requests to `/api/views/search/messages` with this exact structure:
+
+```json
+{
+  "query_string": {
+    "query_string": "*"
+  },
+  "timerange": {
+    "type": "relative",
+    "from": 300
+  },
+  "fields_in_order": ["timestamp", "source", "message", "_id"],
+  "limit": 1000,
+  "chunk_size": 1000,
+  "streams": ["optional-stream-id"]
+}
+```
+
+**Key Requirements:**
+- The `query_string.query_string` nesting is required (not a typo)
+- `timerange.from` must be in seconds (e.g., 300 for last 5 minutes)
+- `timerange.type` must be "relative" for relative time queries
+- Response is always in CSV format regardless of Accept header
+- Stream filtering is done via the `streams` array, not query parameters
 
 ## Query Syntax
 
@@ -106,7 +140,8 @@ engine.addAdapter(
   new GraylogAdapter({
     url: "http://graylog.example.com:9000",
     apiToken: "your-token",
-    apiVersion: "v6", // For Graylog 6.x
+    apiVersion: "v6", // Use v6 API for Graylog 6.x+ (returns CSV)
+    streamId: "optional-stream-id", // Filter by specific stream if needed
   }),
 );
 
@@ -177,6 +212,31 @@ const adapter = new GraylogAdapter({
 - Complying with enterprise security policies
 - Tunneling through firewalls in restricted environments
 
-## Note on Permissions
+## Version-Specific Notes
 
-For Graylog 6.x, ensure your user has access to the Views Search API (`/api/views/search/messages`). Some enterprise deployments may restrict access to the Universal Search API, in which case you should use `apiVersion: 'v6'`.
+### Graylog 6.x Permissions
+
+For Graylog 6.x, ensure your user has access to:
+- The Views Search API (`/api/views/search/messages`)
+- Read permissions on the streams you want to query
+- Export permissions if your Graylog deployment restricts CSV exports
+
+The v6 API is significantly different from the legacy Universal Search API:
+- It only returns CSV data (not JSON)
+- The request structure uses nested `query_string.query_string` format
+- Timerange format is different (relative seconds vs. absolute timestamps)
+- Field selection uses `fields_in_order` array instead of comma-separated string
+
+### Migration from Legacy to v6
+
+When upgrading from legacy to v6 API, simply change the `apiVersion` setting:
+
+```javascript
+// Before (Graylog 2.x-5.x)
+apiVersion: "legacy"
+
+// After (Graylog 6.x+)  
+apiVersion: "v6"
+```
+
+The adapter handles all the underlying API differences automatically.

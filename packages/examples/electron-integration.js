@@ -39,6 +39,7 @@ class IDECorrelationEngine {
           username: config.graylogUser,
           password: config.graylogPassword,
           apiToken: config.graylogToken,
+          apiVersion: config.graylogApiVersion || "legacy", // Use "v6" for Graylog 6.x+
         }),
       );
     }
@@ -217,6 +218,7 @@ async function main() {
     graylogUrl: "http://localhost:9000",
     graylogUser: "admin",
     graylogPassword: "admin",
+    graylogApiVersion: "legacy", // Change to "v6" for Graylog 6.x+
     defaultTimeWindow: "5m",
     maxEvents: 10000,
     maxMemoryMB: 100,
