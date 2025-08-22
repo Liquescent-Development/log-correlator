@@ -20,42 +20,47 @@ npm install @liquescent/log-correlator-query-parser
 ## Usage
 
 ```javascript
-const { PeggyQueryParser } = require('@liquescent/log-correlator-query-parser');
+const { PeggyQueryParser } = require("@liquescent/log-correlator-query-parser");
 
 const parser = new PeggyQueryParser();
 
 // Parse a correlation query
-const query = 'graylog(tier:prd AND status:500)[10m] and on(request_id) loki({service="api"})[10m]';
+const query =
+  'graylog(tier:prd AND status:500)[10m] and on(request_id) loki({service="api"})[10m]';
 const parsed = parser.parse(query);
 
 // Validate syntax
 const validation = parser.validate(query);
 if (!validation.valid) {
-  console.error('Query error:', validation.error);
+  console.error("Query error:", validation.error);
 }
 ```
 
 ## Query Syntax
 
 ### Basic Structure
+
 ```
 SOURCE(SELECTOR)[TIME_RANGE] JOIN_OPERATOR SOURCE(SELECTOR)[TIME_RANGE]
 ```
 
 ### Supported Sources
+
 - `graylog` - Graylog log source with native query syntax
 - `loki` - Loki/Grafana log source with LogQL syntax
 
 ### Examples
 
 #### Graylog Correlation
+
 ```
-graylog(tier:prd AND http-status-code:5*)[1h] 
-  and on(request_id) 
+graylog(tier:prd AND http-status-code:5*)[1h]
+  and on(request_id)
 graylog(tier:staging)[1h]
 ```
 
 #### Loki Correlation
+
 ```
 loki({service="frontend", level="error"})[30m]
   and on(trace_id)
@@ -63,9 +68,10 @@ loki({service="backend"})[30m]
 ```
 
 #### Cross-System Correlation
+
 ```
 graylog(_exists_:request-id)[10m]
-  and on(request_id=request-id) 
+  and on(request_id=request-id)
 loki({job="nginx"})[10m]
 ```
 

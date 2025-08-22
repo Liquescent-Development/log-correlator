@@ -126,12 +126,12 @@ export class GraylogAdapter implements DataSourceAdapter {
 
       const data = await response.json();
       const streams = data.streams || [];
-      
+
       // Find stream by name (case-insensitive)
       const stream = streams.find(
-        (s: any) => 
+        (s: any) =>
           s.title?.toLowerCase() === this.options.streamName?.toLowerCase() ||
-          s.name?.toLowerCase() === this.options.streamName?.toLowerCase()
+          s.name?.toLowerCase() === this.options.streamName?.toLowerCase(),
       );
 
       if (stream) {
@@ -146,9 +146,9 @@ export class GraylogAdapter implements DataSourceAdapter {
         // Only warn if we're not being destroyed
         if (this.activeStreams) {
           console.warn(
-            `Stream "${this.options.streamName}" not found. Available streams: ${
-              streams.map((s: any) => s.title || s.name).join(", ")
-            }`,
+            `Stream "${this.options.streamName}" not found. Available streams: ${streams
+              .map((s: any) => s.title || s.name)
+              .join(", ")}`,
           );
         }
       }
@@ -182,10 +182,11 @@ export class GraylogAdapter implements DataSourceAdapter {
     query: string,
     options?: unknown,
   ): AsyncIterable<LogEvent> {
-    const opts = options as { timeRange?: string; continuous?: boolean } || {};
+    const opts =
+      (options as { timeRange?: string; continuous?: boolean }) || {};
     const timeRange = opts.timeRange || "5m";
     const continuous = opts.continuous === true; // Default to false for correlation queries
-    
+
     if (continuous) {
       // For real-time monitoring, poll continuously
       yield* this.createPollingStream(query, timeRange);
@@ -212,7 +213,10 @@ export class GraylogAdapter implements DataSourceAdapter {
       const effectiveStreamId = await this.getEffectiveStreamId();
 
       const searchParams: Record<string, unknown> = {
-        query: this.options.apiVersion === "v6" ? query : this.convertToGraylogQuery(query),
+        query:
+          this.options.apiVersion === "v6"
+            ? query
+            : this.convertToGraylogQuery(query),
         from: from.toISOString(),
         to: now.toISOString(),
         limit: 1000,
@@ -247,7 +251,7 @@ export class GraylogAdapter implements DataSourceAdapter {
     try {
       let lastMessageId: string | null = null;
       const timeWindowMs = this.parseTimeRange(timeRange);
-      
+
       // Get effective stream ID once at the start
       const effectiveStreamId = await this.getEffectiveStreamId();
 
@@ -256,7 +260,10 @@ export class GraylogAdapter implements DataSourceAdapter {
         const from = new Date(now.getTime() - timeWindowMs);
 
         const searchParams: Record<string, unknown> = {
-          query: this.options.apiVersion === "v6" ? query : this.convertToGraylogQuery(query),
+          query:
+            this.options.apiVersion === "v6"
+              ? query
+              : this.convertToGraylogQuery(query),
           from: from.toISOString(),
           to: now.toISOString(),
           limit: 1000,
@@ -297,13 +304,20 @@ export class GraylogAdapter implements DataSourceAdapter {
           // Retry with exponential backoff - check for abort signal
           await new Promise((resolve) => {
             if (controller.signal.aborted) return resolve(undefined);
-            
-            const timeoutId = setTimeout(resolve, this.options.pollInterval! * 2);
-            
-            controller.signal.addEventListener('abort', () => {
-              clearTimeout(timeoutId);
-              resolve(undefined);
-            }, { once: true });
+
+            const timeoutId = setTimeout(
+              resolve,
+              this.options.pollInterval! * 2,
+            );
+
+            controller.signal.addEventListener(
+              "abort",
+              () => {
+                clearTimeout(timeoutId);
+                resolve(undefined);
+              },
+              { once: true },
+            );
           });
         }
 
@@ -313,13 +327,17 @@ export class GraylogAdapter implements DataSourceAdapter {
         // Wait before next poll - check for abort signal
         await new Promise((resolve) => {
           if (controller.signal.aborted) return resolve(undefined);
-          
+
           const timeoutId = setTimeout(resolve, this.options.pollInterval);
-          
-          controller.signal.addEventListener('abort', () => {
-            clearTimeout(timeoutId);
-            resolve(undefined);
-          }, { once: true });
+
+          controller.signal.addEventListener(
+            "abort",
+            () => {
+              clearTimeout(timeoutId);
+              resolve(undefined);
+            },
+            { once: true },
+          );
         });
       }
     } finally {
@@ -380,7 +398,7 @@ export class GraylogAdapter implements DataSourceAdapter {
 
     // Convert query for Graylog v6 - handle special cases
     let query = (params.query as string) || "";
-    
+
     // Graylog v6 doesn't allow '*' as first character in WildcardQuery
     // Use empty string for "all messages" queries
     if (query === "*" || query === "") {
@@ -403,13 +421,34 @@ export class GraylogAdapter implements DataSourceAdapter {
       // Using "*" would be ideal but some Graylog versions don't support it
       // So we request common fields explicitly
       fields_in_order: [
-        "timestamp", "source", "message", "_id",
-        "level", "severity", "tier", "application", 
-        "http_status_class", "status", "http_status",
-        "trace_id", "request_id", "correlation_id", "session_id", "span_id",
-        "host", "service", "component", "module",
-        "user", "client_ip", "method", "path", "url",
-        "response_time", "duration", "size"
+        "timestamp",
+        "source",
+        "message",
+        "_id",
+        "level",
+        "severity",
+        "tier",
+        "application",
+        "http_status_class",
+        "status",
+        "http_status",
+        "trace_id",
+        "request_id",
+        "correlation_id",
+        "session_id",
+        "span_id",
+        "host",
+        "service",
+        "component",
+        "module",
+        "user",
+        "client_ip",
+        "method",
+        "path",
+        "url",
+        "response_time",
+        "duration",
+        "size",
       ],
       limit: (params.limit as number) || 1000,
       chunk_size: 1000,
@@ -470,7 +509,6 @@ export class GraylogAdapter implements DataSourceAdapter {
     const csvText = await response.text();
     return this.parseCSVResponse(csvText);
   }
-
 
   private parseCSVResponse(csv: string): GraylogSearchResponse {
     const lines = csv.split("\n").filter((line) => line.trim());
@@ -642,41 +680,41 @@ export class GraylogAdapter implements DataSourceAdapter {
   private sanitizeQueryForV6(query: string): string {
     // Graylog v6 has stricter query parsing rules
     // Handle common patterns that cause issues
-    
+
     // Remove leading/trailing whitespace
     query = query.trim();
-    
+
     // If query is just a wildcard, return empty (search all)
     if (query === "*") {
       return "";
     }
-    
+
     // If query starts with standalone wildcard, remove it (not allowed in v6)
     if (query.startsWith("* ")) {
       query = query.substring(2).trim();
     }
-    
+
     // Handle empty field queries (e.g., "field:" without value)
     // These cause parse errors in v6
     // But don't match field:* which is valid
     query = query.replace(/(\w+):\s*(?=\s|$|AND|OR)/g, "$1:*");
-    
+
     // Handle quoted empty values - remove them entirely
     query = query.replace(/(\w+):""\s*/g, "");
     query = query.replace(/(\w+):''\s*/g, "");
-    
+
     // Handle invalid patterns like ":value" (colon without field name)
     query = query.replace(/^\s*:\w+/g, "");
     query = query.replace(/\s+:\w+/g, "");
-    
+
     // Clean up multiple spaces and trim
     query = query.replace(/\s+/g, " ").trim();
-    
+
     // If query becomes empty after sanitization, return empty string
     if (!query || query === "AND" || query === "OR") {
       return "";
     }
-    
+
     return query;
   }
 
@@ -858,7 +896,7 @@ export class GraylogAdapter implements DataSourceAdapter {
       controller.abort();
     }
     this.activeStreams.clear();
-    
+
     // Wait for stream resolution to complete if in progress
     // This prevents the "Cannot log after tests are done" error
     if (this.streamResolutionPromise) {

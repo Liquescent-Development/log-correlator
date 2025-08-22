@@ -12,13 +12,17 @@ describe("GraylogAdapter", () => {
   let defaultOptions: GraylogAdapterOptions;
 
   // Simple helper that just starts the stream and gives time for fetch to be called
-  const startStreamAndCheckFetch = (adapter: GraylogAdapter, query: string, options?: unknown) => {
+  const startStreamAndCheckFetch = (
+    adapter: GraylogAdapter,
+    query: string,
+    options?: unknown,
+  ) => {
     const streamIterator = adapter.createStream(query, options);
     const iterator = streamIterator[Symbol.asyncIterator]();
-    
+
     // Start the async generator but don't wait for it to complete
     void iterator.next();
-    
+
     return iterator;
   };
 
@@ -101,7 +105,7 @@ describe("GraylogAdapter", () => {
     it("should create Basic auth header from username/password", async () => {
       // Use real timers for this test
       jest.useRealTimers();
-      
+
       // Setup mock response first
       const mockResponse = {
         ok: true,
@@ -114,9 +118,9 @@ describe("GraylogAdapter", () => {
 
       const query = "service:frontend";
       startStreamAndCheckFetch(adapter, query);
-      
+
       // Wait for the fetch call to happen
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       expect(mockFetch).toHaveBeenCalledWith(
         expect.any(String),
@@ -126,7 +130,7 @@ describe("GraylogAdapter", () => {
           }),
         }),
       );
-      
+
       // Restore fake timers
       jest.useFakeTimers();
     });
@@ -134,7 +138,7 @@ describe("GraylogAdapter", () => {
     it("should create token auth header from API token", async () => {
       // Use real timers for this test
       jest.useRealTimers();
-      
+
       // Setup mock response first
       const mockResponse = {
         ok: true,
@@ -152,9 +156,9 @@ describe("GraylogAdapter", () => {
 
       const query = "service:frontend";
       startStreamAndCheckFetch(adapter, query);
-      
+
       // Wait for the fetch call to happen
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       expect(mockFetch).toHaveBeenCalledWith(
         expect.any(String),
@@ -164,7 +168,7 @@ describe("GraylogAdapter", () => {
           }),
         }),
       );
-      
+
       // Restore fake timers
       jest.useFakeTimers();
     });
@@ -172,7 +176,7 @@ describe("GraylogAdapter", () => {
     it("should encode Basic auth credentials correctly", async () => {
       // Use real timers for this test
       jest.useRealTimers();
-      
+
       // Setup mock response first
       const mockResponse = {
         ok: true,
@@ -191,9 +195,9 @@ describe("GraylogAdapter", () => {
 
       const query = "service:frontend";
       startStreamAndCheckFetch(adapter, query);
-      
+
       // Wait for the fetch call to happen
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       // testuser:testpass in base64 is dGVzdHVzZXI6dGVzdHBhc3M=
       expect(mockFetch).toHaveBeenCalledWith(
@@ -204,7 +208,7 @@ describe("GraylogAdapter", () => {
           }),
         }),
       );
-      
+
       // Restore fake timers
       jest.useFakeTimers();
     });
@@ -343,7 +347,7 @@ describe("GraylogAdapter", () => {
     it("should handle time range options", async () => {
       // Use real timers for this test
       jest.useRealTimers();
-      
+
       const query = "service:frontend";
       const options = { timeRange: "10m" };
 
@@ -358,9 +362,9 @@ describe("GraylogAdapter", () => {
       mockFetch.mockResolvedValue(mockResponse as any);
 
       startStreamAndCheckFetch(adapter, query, options);
-      
+
       // Wait for the fetch call to happen
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       // Should use 10 minute time range
       expect(mockFetch).toHaveBeenCalledWith(
@@ -369,7 +373,7 @@ describe("GraylogAdapter", () => {
       );
 
       await adapter.destroy();
-      
+
       // Restore fake timers
       jest.useFakeTimers();
     });
@@ -377,7 +381,7 @@ describe("GraylogAdapter", () => {
     it("should include stream filter when streamId provided", async () => {
       // Use real timers for this test
       jest.useRealTimers();
-      
+
       const optionsWithStream = {
         ...defaultOptions,
         streamId: "custom-stream-123",
@@ -398,9 +402,9 @@ describe("GraylogAdapter", () => {
       mockFetch.mockResolvedValue(mockResponse as any);
 
       startStreamAndCheckFetch(adapter, query);
-      
+
       // Wait for the fetch call to happen
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       // Should include stream filter in query parameters
       expect(mockFetch).toHaveBeenCalledWith(
@@ -409,7 +413,7 @@ describe("GraylogAdapter", () => {
       );
 
       await adapter.destroy();
-      
+
       // Restore fake timers
       jest.useFakeTimers();
     });
@@ -476,7 +480,7 @@ describe("GraylogAdapter", () => {
     it("should handle polling errors gracefully in continuous mode", async () => {
       // Use real timers for this test
       jest.useRealTimers();
-      
+
       const query = "service:frontend";
 
       // First call fails, second succeeds
@@ -491,9 +495,9 @@ describe("GraylogAdapter", () => {
         } as any);
 
       startStreamAndCheckFetch(adapter, query, { continuous: true });
-      
+
       // Wait for the fetch call to happen
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       // Should have tried at least once
       expect(mockFetch).toHaveBeenCalledWith(
@@ -502,7 +506,7 @@ describe("GraylogAdapter", () => {
       );
 
       await adapter.destroy();
-      
+
       // Restore fake timers
       jest.useFakeTimers();
     });
@@ -510,7 +514,7 @@ describe("GraylogAdapter", () => {
     it("should handle HTTP error responses in continuous mode", async () => {
       // Use real timers for this test
       jest.useRealTimers();
-      
+
       const query = "service:frontend";
 
       // Mock HTTP error response for first call, then success for subsequent calls
@@ -530,9 +534,9 @@ describe("GraylogAdapter", () => {
         } as any);
 
       startStreamAndCheckFetch(adapter, query, { continuous: true });
-      
+
       // Wait for the fetch call to happen
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       // Should have made at least one fetch call
       expect(mockFetch).toHaveBeenCalledWith(
@@ -541,7 +545,7 @@ describe("GraylogAdapter", () => {
       );
 
       await adapter.destroy();
-      
+
       // Restore fake timers
       jest.useFakeTimers();
     });
@@ -549,15 +553,15 @@ describe("GraylogAdapter", () => {
     it("should use exponential backoff on errors in continuous mode", async () => {
       // Use real timers for this test
       jest.useRealTimers();
-      
+
       const query = "service:frontend";
 
       mockFetch.mockRejectedValue(new Error("Network error"));
 
       startStreamAndCheckFetch(adapter, query, { continuous: true });
-      
+
       // Wait for the fetch call to happen
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       // Should continue polling with backoff
       expect(mockFetch).toHaveBeenCalledWith(
@@ -566,7 +570,7 @@ describe("GraylogAdapter", () => {
       );
 
       await adapter.destroy();
-      
+
       // Restore fake timers
       jest.useFakeTimers();
     });
@@ -584,7 +588,7 @@ describe("GraylogAdapter", () => {
     it("should use POST method for v6 views API", async () => {
       // Use real timers for this test
       jest.useRealTimers();
-      
+
       const query = "service:frontend";
 
       const mockResponse = {
@@ -597,13 +601,13 @@ describe("GraylogAdapter", () => {
               "2024-01-01T10:00:01Z,frontend,Test message 2",
           ),
       };
-      
+
       mockFetch.mockResolvedValue(mockResponse as any);
 
       startStreamAndCheckFetch(adapter, query);
-      
+
       // Wait for the fetch call to happen
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       expect(mockFetch).toHaveBeenCalledWith(
         expect.stringContaining("/api/views/search/messages"),
@@ -618,7 +622,7 @@ describe("GraylogAdapter", () => {
       );
 
       await adapter.destroy();
-      
+
       // Restore fake timers
       jest.useFakeTimers();
     });
@@ -691,20 +695,20 @@ describe("GraylogAdapter", () => {
     it("should handle empty CSV response", async () => {
       // Use real timers for this test
       jest.useRealTimers();
-      
+
       const query = "service:frontend";
 
       const mockResponse = {
         ok: true,
         text: jest.fn().mockResolvedValue(""),
       };
-      
+
       mockFetch.mockResolvedValue(mockResponse as any);
 
       startStreamAndCheckFetch(adapter, query);
-      
+
       // Wait for the fetch call to happen
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       // Should continue polling even with empty response
       expect(mockFetch).toHaveBeenCalledWith(
@@ -713,7 +717,7 @@ describe("GraylogAdapter", () => {
       );
 
       await adapter.destroy();
-      
+
       // Restore fake timers
       jest.useFakeTimers();
     });
@@ -727,7 +731,7 @@ describe("GraylogAdapter", () => {
     it("should convert PromQL-style label matchers to Graylog syntax", async () => {
       // Use real timers for this test to avoid hanging
       jest.useRealTimers();
-      
+
       const queries = [
         { input: 'service="frontend"', expected: "service:frontend" },
         { input: "level='error'", expected: "level:error" },
@@ -753,9 +757,9 @@ describe("GraylogAdapter", () => {
         mockFetch.mockResolvedValue(mockResponse as any);
 
         startStreamAndCheckFetch(adapter, input);
-        
+
         // Wait a short time for the fetch call to happen
-        await new Promise(resolve => setTimeout(resolve, 50));
+        await new Promise((resolve) => setTimeout(resolve, 50));
 
         // Verify the converted query is used
         expect(mockFetch).toHaveBeenCalledWith(
@@ -767,7 +771,7 @@ describe("GraylogAdapter", () => {
       }
 
       await adapter.destroy();
-      
+
       // Restore fake timers
       jest.useFakeTimers();
     });
@@ -912,7 +916,7 @@ describe("GraylogAdapter", () => {
     it("should parse different time range formats", async () => {
       // Use real timers for this test to avoid hanging
       jest.useRealTimers();
-      
+
       const testCases = [
         { timeRange: "30s", expectedMs: 30 * 1000 },
         { timeRange: "5m", expectedMs: 5 * 60 * 1000 },
@@ -934,9 +938,9 @@ describe("GraylogAdapter", () => {
         mockFetch.mockResolvedValue(mockResponse as any);
 
         startStreamAndCheckFetch(adapter, query, { timeRange });
-        
+
         // Wait a short time for the fetch call to happen
-        await new Promise(resolve => setTimeout(resolve, 50));
+        await new Promise((resolve) => setTimeout(resolve, 50));
 
         expect(mockFetch).toHaveBeenCalledWith(
           expect.stringContaining("/api/search/universal/relative"),
@@ -947,7 +951,7 @@ describe("GraylogAdapter", () => {
       }
 
       await adapter.destroy();
-      
+
       // Restore fake timers
       jest.useFakeTimers();
     });
@@ -955,7 +959,7 @@ describe("GraylogAdapter", () => {
     it("should use default time range for invalid formats", async () => {
       // Use real timers for this test to avoid hanging
       jest.useRealTimers();
-      
+
       const query = "service:frontend";
 
       const mockResponse = {
@@ -971,9 +975,9 @@ describe("GraylogAdapter", () => {
       startStreamAndCheckFetch(adapter, query, {
         timeRange: "invalid",
       });
-      
+
       // Wait a short time for the fetch call to happen
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       // Should still make request with default time range
       expect(mockFetch).toHaveBeenCalledWith(
@@ -982,7 +986,7 @@ describe("GraylogAdapter", () => {
       );
 
       await adapter.destroy();
-      
+
       // Restore fake timers
       jest.useFakeTimers();
     });
@@ -1131,7 +1135,7 @@ describe("GraylogAdapter", () => {
     it("should handle empty message arrays", async () => {
       // Use real timers for this test to avoid hanging
       jest.useRealTimers();
-      
+
       const query = "service:frontend";
 
       const mockResponse = {
@@ -1145,9 +1149,9 @@ describe("GraylogAdapter", () => {
       mockFetch.mockResolvedValue(mockResponse as any);
 
       startStreamAndCheckFetch(adapter, query);
-      
+
       // Wait a short time for the fetch call to happen
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       expect(mockFetch).toHaveBeenCalledWith(
         expect.stringContaining("/api/search/universal/relative"),
@@ -1155,7 +1159,7 @@ describe("GraylogAdapter", () => {
       );
 
       await adapter.destroy();
-      
+
       // Restore fake timers
       jest.useFakeTimers();
     });
@@ -1196,7 +1200,7 @@ describe("GraylogAdapter", () => {
     it("should handle JSON parsing errors in continuous mode", async () => {
       // Use real timers for this test to avoid hanging
       jest.useRealTimers();
-      
+
       const query = "service:frontend";
 
       const mockResponse = {
@@ -1207,9 +1211,9 @@ describe("GraylogAdapter", () => {
       mockFetch.mockResolvedValue(mockResponse as any);
 
       startStreamAndCheckFetch(adapter, query, { continuous: true });
-      
+
       // Wait a short time for the fetch call to happen
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       expect(mockFetch).toHaveBeenCalledWith(
         expect.stringContaining("/api/search/universal/relative"),
@@ -1217,7 +1221,7 @@ describe("GraylogAdapter", () => {
       );
 
       await adapter.destroy();
-      
+
       // Restore fake timers
       jest.useFakeTimers();
     });
@@ -1225,7 +1229,7 @@ describe("GraylogAdapter", () => {
     it("should handle network timeouts", async () => {
       // Use real timers for this test to avoid hanging
       jest.useRealTimers();
-      
+
       const options = { ...defaultOptions, timeout: 100 };
       adapter = new GraylogAdapter(options);
 
@@ -1237,9 +1241,9 @@ describe("GraylogAdapter", () => {
       );
 
       startStreamAndCheckFetch(adapter, query);
-      
+
       // Wait a short time for the fetch call to happen
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       // Should handle timeout gracefully
       expect(mockFetch).toHaveBeenCalledWith(
@@ -1248,7 +1252,7 @@ describe("GraylogAdapter", () => {
       );
 
       await adapter.destroy();
-      
+
       // Restore fake timers
       jest.useFakeTimers();
     });

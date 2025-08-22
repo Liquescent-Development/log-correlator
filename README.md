@@ -188,6 +188,7 @@ cd packages/adapters/loki && npm run test:integration
 ```
 
 **Graylog Integration Tests** verify:
+
 - Connection and authentication (basic auth and API tokens)
 - Query execution across legacy (2.x-5.x) and v6+ APIs
 - Field extraction and correlation ID detection

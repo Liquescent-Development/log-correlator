@@ -241,19 +241,19 @@ These are exposed in the `joinKeys` property of each LogEvent for correlation.
 
 ## Options
 
-| Option         | Type             | Default  | Description                                     |
-| -------------- | ---------------- | -------- | ----------------------------------------------- |
-| `url`          | string           | required | Graylog server URL                              |
-| `username`     | string           | -        | Username for basic auth                         |
-| `password`     | string           | -        | Password for basic auth                         |
-| `apiToken`     | string           | -        | API token for token auth                        |
-| `apiVersion`   | 'legacy' \| 'v6' | 'legacy' | API version to use                              |
-| `pollInterval` | number           | 2000     | Polling interval in milliseconds                |
-| `timeout`      | number           | 15000    | Request timeout in milliseconds                 |
-| `maxRetries`   | number           | 3        | Maximum retry attempts                          |
-| `streamId`     | string           | -        | Stream ID (24-char MongoDB ObjectId)            |
-| `streamName`   | string           | -        | Stream name (automatically resolved to ID)      |
-| `proxy`        | object           | -        | SOCKS proxy configuration                       |
+| Option         | Type             | Default  | Description                                |
+| -------------- | ---------------- | -------- | ------------------------------------------ |
+| `url`          | string           | required | Graylog server URL                         |
+| `username`     | string           | -        | Username for basic auth                    |
+| `password`     | string           | -        | Password for basic auth                    |
+| `apiToken`     | string           | -        | API token for token auth                   |
+| `apiVersion`   | 'legacy' \| 'v6' | 'legacy' | API version to use                         |
+| `pollInterval` | number           | 2000     | Polling interval in milliseconds           |
+| `timeout`      | number           | 15000    | Request timeout in milliseconds            |
+| `maxRetries`   | number           | 3        | Maximum retry attempts                     |
+| `streamId`     | string           | -        | Stream ID (24-char MongoDB ObjectId)       |
+| `streamName`   | string           | -        | Stream name (automatically resolved to ID) |
+| `proxy`        | object           | -        | SOCKS proxy configuration                  |
 
 ## SOCKS Proxy Support
 
@@ -335,12 +335,14 @@ The Graylog adapter includes comprehensive integration tests that can be run aga
 ### Setting Up Integration Tests
 
 1. **Copy the environment template:**
+
    ```bash
    cp .env.example .env
    ```
 
 2. **Configure your Graylog connection:**
    Edit `.env` with your Graylog instance details:
+
    ```bash
    GRAYLOG_URL=http://your-graylog-server:9000
    GRAYLOG_API_VERSION=v6  # or 'legacy' for older versions
@@ -351,6 +353,7 @@ The Graylog adapter includes comprehensive integration tests that can be run aga
    ```
 
 3. **Optional: Configure SOCKS proxy (for restricted networks):**
+
    ```bash
    SOCKS_PROXY_HOST=127.0.0.1
    SOCKS_PROXY_PORT=1080
@@ -412,22 +415,22 @@ For local development, create `graylog.config.local.js` (gitignored) to override
 ```javascript
 module.exports = {
   connection: {
-    url: 'http://localhost:9000',
-    username: 'admin',
-    password: 'admin',
-    apiVersion: 'v6',
-    streamName: 'My Test Stream'
+    url: "http://localhost:9000",
+    username: "admin",
+    password: "admin",
+    apiVersion: "v6",
+    streamName: "My Test Stream",
   },
   queries: {
     simple: {
-      errorLogs: 'level:error',
-      warningLogs: 'level:warn'
-    }
+      errorLogs: "level:error",
+      warningLogs: "level:warn",
+    },
   },
   testConfig: {
     verbose: true,
-    maxEventsPerTest: 50
-  }
+    maxEventsPerTest: 50,
+  },
 };
 ```
 
@@ -446,6 +449,7 @@ module.exports = {
 The Graylog adapter includes both types of tests to ensure comprehensive coverage:
 
 **Unit Tests** (`src/*.test.ts`):
+
 - Test individual functions and methods in isolation
 - Use mocked HTTP responses and dependencies
 - Run quickly as part of the standard test suite
@@ -453,6 +457,7 @@ The Graylog adapter includes both types of tests to ensure comprehensive coverag
 - Run with: `npm test`
 
 **Integration Tests** (`test/integration/*.test.ts`):
+
 - Test against live Graylog instances
 - Verify real API compatibility and data flow
 - Require actual Graylog server and configuration
@@ -505,6 +510,7 @@ The integration tests include performance monitoring:
 - **Timeout Handling**: Prevents tests from hanging on slow networks
 
 For optimal performance:
+
 - Use specific queries rather than wildcards
 - Configure appropriate time ranges for your data volume
 - Set realistic event limits based on your log volume

@@ -95,21 +95,21 @@ function updateReadmeVersions(oldVersion, newVersion) {
     // Match patterns like: @liquescent/log-correlator-core@^0.0.1
     content = content.replace(
       /(@liquescent\/log-correlator-[a-z-]+@\^?)\d+\.\d+\.\d+/g,
-      `$1${newVersion}`
+      `$1${newVersion}`,
     );
 
     // Update version in the pre-release warning
     // Match pattern like: This is version 0.0.1
     content = content.replace(
       /This is version \d+\.\d+\.\d+/g,
-      `This is version ${newVersion}`
+      `This is version ${newVersion}`,
     );
 
     // Update any standalone version references in code blocks
     // Match patterns like: "version": "0.0.1"
     content = content.replace(
       /"version":\s*"\d+\.\d+\.\d+"/g,
-      `"version": "${newVersion}"`
+      `"version": "${newVersion}"`,
     );
 
     if (content !== originalContent) {
