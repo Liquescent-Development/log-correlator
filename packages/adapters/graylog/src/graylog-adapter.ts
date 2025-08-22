@@ -138,9 +138,8 @@ export class GraylogAdapter implements DataSourceAdapter {
         this.resolvedStreamId = stream.id;
         // Only log if we're not being destroyed (prevents "Cannot log after tests are done")
         if (this.activeStreams) {
-          console.log(
-            `Resolved stream name "${this.options.streamName}" to ID: ${this.resolvedStreamId}`,
-          );
+          // Don't log the actual stream ID for security reasons (CodeQL js/clear-text-logging)
+          console.log(`Resolved stream name "${this.options.streamName}"`);
         }
       } else {
         // Only warn if we're not being destroyed
@@ -461,8 +460,9 @@ export class GraylogAdapter implements DataSourceAdapter {
       if (/^[a-f0-9]{24}$/i.test(effectiveStreamId)) {
         requestBody.streams = [effectiveStreamId];
       } else {
+        // Don't log the actual stream ID for security reasons (CodeQL js/clear-text-logging)
         console.warn(
-          `Warning: Invalid streamId "${effectiveStreamId}" - must be 24 hex characters. Ignoring stream filter.`,
+          `Warning: Invalid streamId format - must be 24 hex characters. Ignoring stream filter.`,
         );
       }
     }
